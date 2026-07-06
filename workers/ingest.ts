@@ -323,14 +323,24 @@ function upsertTeam(db: D1Database, team: z.infer<typeof teamSchema>, now: strin
 
 async function syncFootballDataMatches(env: IngestEnv): Promise<number> {
   return withSyncRun(env, "football-data", "matches", async () => {
-    const payload = matchesSchema.parse(await footballDataRequest(
-      `/matches?dateFrom=${todayUtc(-1)}&dateTo=${todayUtc(3)}`,
-      env,
-    ));
+    // Free plan blocks the global /matches endpoint — query per competition instead.
+    const codes = env.FOOTBALL_DATA_COMPETITIONS.split(",").map((c) => c.trim()).filter(Boolean).slice(0, 6);
+    const allMatches: z.infer<typeof matchesSchema>["matches"] = [];
+    for (const code of codes) {
+      try {
+        const p = matchesSchema.parse(await footballDataRequest(
+          `/competitions/${encodeURIComponent(code)}/matches?dateFrom=${todayUtc(-1)}&dateTo=${todayUtc(3)}`,
+          env,
+        ));
+        allMatches.push(...p.matches);
+      } catch {
+        // skip unavailable competition and continue
+      }
+    }
     const now = new Date().toISOString();
     const statements: D1PreparedStatement[] = [];
 
-    for (const match of payload.matches) {
+    for (const match of allMatches) {
       const competitionId = `football-data:competition:${match.competition.id}`;
       statements.push(
         env.DB.prepare(`
@@ -423,6 +433,14 @@ async function syncOpenLigaMatches(env: IngestEnv): Promise<number> {
         const matchId = `openligadb:match:${match.matchID}`;
         const kickoffAt = match.matchDateTimeUTC ?? `${match.matchDateTime}Z`;
         const finalResult = [...match.matchResults].sort((a, b) => b.resultOrderID - a.resultOrderID)[0];
+        // OpenLigaDB does not update matchResults in real-time during live play; the goals array
+        // carries the authoritative running score. Use it first; fall back to matchResults when
+        // no goals have been recorded yet (pre-match or genuinely 0-0 start).
+        const lastGoal = match.goals.length > 0
+          ? match.goals.reduce((prev, curr) => curr.goalID > prev.goalID ? curr : prev)
+          : null;
+        const homeScore = lastGoal?.scoreTeam1 ?? finalResult?.pointsTeam1 ?? null;
+        const awayScore = lastGoal?.scoreTeam2 ?? finalResult?.pointsTeam2 ?? null;
 
         statements.push(
           env.DB.prepare(`
@@ -478,8 +496,8 @@ async function syncOpenLigaMatches(env: IngestEnv): Promise<number> {
             normalizeOpenLigaStatus(match.matchIsFinished, kickoffAt),
             homeTeamId,
             awayTeamId,
-            finalResult?.pointsTeam1 ?? null,
-            finalResult?.pointsTeam2 ?? null,
+            homeScore,
+            awayScore,
             now,
           ),
         );
@@ -634,13 +652,12 @@ async function syncRss(env: IngestEnv, providerId: "bbc-rss" | "transfermarkt-rs
       const externalId = await stableId(textValue(item.data.guid) || link);
       const publishedAtRaw = textValue(item.data.pubDate);
       const publishedAt = Number.isNaN(Date.parse(publishedAtRaw)) ? now : new Date(publishedAtRaw).toISOString();
+      // INSERT OR IGNORE handles both UNIQUE constraints (provider_id+external_id and url).
+      // News articles don't need updating once stored — skipping duplicates is correct.
       statements.push(env.DB.prepare(`
-        INSERT INTO news_items (
+        INSERT OR IGNORE INTO news_items (
           id, provider_id, external_id, title, url, published_at, category, summary, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(provider_id, external_id) DO UPDATE SET
-          title = excluded.title, url = excluded.url, published_at = excluded.published_at,
-          category = excluded.category, summary = excluded.summary, updated_at = excluded.updated_at
       `).bind(
         `${providerId}:news:${externalId}`,
         providerId,
@@ -1089,25 +1106,65 @@ async function runScope(scope: SyncScope, env: IngestEnv): Promise<Record<string
   return result;
 }
 
+// Returns UTC hour and minute from a Date, used to schedule optional syncs
+// within the single free-plan cron trigger (*/30 * * * *).
+//
+// API-Football budget: ~100 req/day free.
+// - Transfers (3 teams × 1 req): runs at UTC 0:15, 6:15, 12:15, 18:15 → 4 × 3 = 12 req/day
+// - Stats (≤8 fixtures × 2 req + 1 list req): runs at UTC 3:45 → ≤17 req/day
+// - football-data.org standings (6 comps × 1 req): runs at UTC 0:00, 6:00, 12:00, 18:00 → 24 req/day
+// Total per-day API-Football: ~29 req — safely under the 100 req/day free limit.
+function shouldRunAtUtc(nowUtc: Date, targetHour: number, targetMinute: number): boolean {
+  return nowUtc.getUTCHours() === targetHour && nowUtc.getUTCMinutes() === targetMinute;
+}
+
 async function runScheduled(cron: string, env: IngestEnv): Promise<void> {
-  if (cron === "*/30 * * * *") {
-    const result = {
-      matches: await syncMatches(env),
-      news: await syncNews(env),
-    };
-    console.log(JSON.stringify({ message: "scheduled public sync complete", cron, result }));
+  if (cron !== "*/5 * * * *" && cron !== "*/30 * * * *") {
+    // Dedicated single-scope crons (e.g. if split crons are added later).
+    const scope: SyncScope = cron === "0 * * * *"
+        ? "standings"
+        : cron === "15 */6 * * *"
+          ? "transfers"
+          : cron === "45 3 * * *"
+            ? "stats"
+          : "matches";
+    const result = await runScope(scope, env);
+    console.log(JSON.stringify({ message: "scheduled sync complete", cron, scope, result }));
     return;
   }
 
-  const scope: SyncScope = cron === "0 * * * *"
-      ? "standings"
-      : cron === "15 */6 * * *"
-        ? "transfers"
-        : cron === "45 3 * * *"
-          ? "stats"
-        : "matches";
-  const result = await runScope(scope, env);
-  console.log(JSON.stringify({ message: "scheduled sync complete", cron, scope, result }));
+  const now = new Date();
+  const h = now.getUTCHours();
+  const m = now.getUTCMinutes();
+
+  // Always: matches (OpenLigaDB + football-data.org) + RSS news
+  const result: Record<string, number> = {
+    matches: await syncMatches(env),
+    news: await syncNews(env),
+  };
+
+  // football-data.org standings — every 6 hours at :00
+  if (m === 0 && (h === 0 || h === 6 || h === 12 || h === 18)) {
+    result.standings = featureEnabled(env.ENABLE_FOOTBALL_DATA)
+      ? await syncStandings(env).catch(() => 0)
+      : 0;
+  }
+
+  // API-Football transfers — every 6 hours at :15
+  if (m === 15 && (h === 0 || h === 6 || h === 12 || h === 18)) {
+    result.transfers = featureEnabled(env.ENABLE_API_FOOTBALL)
+      ? await syncTransfers(env).catch(() => 0)
+      : 0;
+  }
+
+  // API-Football match stats — once daily at 03:45 UTC (KST 12:45)
+  if (shouldRunAtUtc(now, 3, 45)) {
+    result.stats = featureEnabled(env.ENABLE_API_FOOTBALL)
+      ? await syncApiFootballStats(env).catch(() => 0)
+      : 0;
+  }
+
+  console.log(JSON.stringify({ message: "scheduled public sync complete", cron, result }));
 }
 
 export default {
