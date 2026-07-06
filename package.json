@@ -1,0 +1,46 @@
+{
+  "name": "soccer-korea",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "postinstall": "node scripts/patch-opennext-windows.mjs",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "build:cf": "node scripts/patch-opennext-windows.mjs && opennextjs-cloudflare build",
+    "preview": "npm run build:cf && opennextjs-cloudflare preview",
+    "deploy": "npm run build:cf && opennextjs-cloudflare deploy",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
+    "ingest:dev": "wrangler dev --config wrangler.ingest.jsonc --test-scheduled",
+    "ingest:deploy": "wrangler deploy --config wrangler.ingest.jsonc",
+    "ingest:typegen": "wrangler types --config wrangler.ingest.jsonc --env-interface IngestEnv ingest-env.d.ts",
+    "d1:migrate:local": "wrangler d1 migrations apply soccer-korea-db --local",
+    "d1:migrate:remote": "wrangler d1 migrations apply soccer-korea-db --remote",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "overrides": {
+    "postcss": "8.5.16"
+  },
+  "dependencies": {
+    "@opennextjs/cloudflare": "1.20.1",
+    "fast-xml-parser": "5.9.3",
+    "lucide-react": "^0.468.0",
+    "next": "16.2.10",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "rss-parser": "^3.13.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "16.2.10",
+    "typescript": "^5.9.0",
+    "vitest": "^4.0.0",
+    "wrangler": "4.107.0"
+  }
+}

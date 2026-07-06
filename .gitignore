@@ -1,0 +1,15 @@
+node_modules/
+.next/
+.open-next/
+.wrangler/
+coverage/
+.env
+.env.local
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.vercel/
+*.log
+*.cpuprofile
+*.tsbuildinfo
+data/cache/
