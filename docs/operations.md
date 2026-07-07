@@ -8,6 +8,7 @@
 - 자동 수집: OpenLigaDB, football-data.org, API-Football, BBC Football RSS, Transfermarkt 공식 RSS
 - `ENABLE_FOOTBALL_DATA=true`
 - `ENABLE_API_FOOTBALL=true`
+- `ENABLE_API_FOOTBALL_STATS=false` — 무료 플랜은 2026 시즌 상세 통계를 제공하지 않으므로 이적 수집과 분리
 - football-data.org 대회: 월드컵·프리미어리그·라리가·분데스리가·세리에 A·리그 1
 - API-Football 상세 수집 상한: 대회 조회를 포함해 한 실행 10요청 이내, 현재 최대 4경기
 - 동일한 경기·팀·득점 이벤트는 값이 바뀌지 않으면 D1에 다시 쓰지 않음

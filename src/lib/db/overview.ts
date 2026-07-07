@@ -44,6 +44,7 @@ const marketValueRowSchema = z.object({
 const providerRowSchema = z.object({
   id: z.string(), display_name: z.string(), attribution: nullableText, last_status: nullableText,
   last_sync: nullableText, last_success: nullableText, error_message: nullableText,
+  detail_status: nullableText, detail_error: nullableText,
 });
 
 type MatchRow = z.infer<typeof matchRowSchema>;
@@ -129,7 +130,11 @@ function mapSources(rows: ProviderRow[]): SourceMeta[] {
   return rows.map((row) => {
     const usableAt = row.last_success ?? (row.last_status === "partial" ? row.last_sync : null);
     const authenticationIssue = /invalid|missing application key|token/i.test(row.error_message ?? "");
-    const note = row.last_status === "running" && usableAt
+    const freePlanDetailLimit = row.id === "api-football"
+      && /free plans do not have access/i.test(row.detail_error ?? "");
+    const note = freePlanDetailLimit
+      ? "이적 데이터는 사용 가능 · 2026 경기 상세 통계는 무료 플랜 범위 밖입니다."
+      : row.last_status === "running" && usableAt
       ? `현재 갱신 중 · 마지막 성공: ${usableAt}`
       : authenticationIssue && usableAt
         ? `공급자 인증 확인이 필요합니다. 마지막 정상 데이터: ${usableAt}`
@@ -226,6 +231,12 @@ export async function getD1Overview(): Promise<OverviewData | null> {
               WHERE sr.provider_id = p.id AND sr.status IN ('success', 'partial')
               ORDER BY sr.started_at DESC LIMIT 1) AS last_success,
              (SELECT sr.error_message FROM sync_runs sr WHERE sr.provider_id = p.id ORDER BY sr.started_at DESC LIMIT 1) AS error_message
+             ,(SELECT sr.status FROM sync_runs sr
+               WHERE sr.provider_id = p.id AND sr.sync_type = 'match-stats'
+               ORDER BY sr.started_at DESC LIMIT 1) AS detail_status
+             ,(SELECT sr.error_message FROM sync_runs sr
+               WHERE sr.provider_id = p.id AND sr.sync_type = 'match-stats'
+               ORDER BY sr.started_at DESC LIMIT 1) AS detail_error
       FROM providers p WHERE p.enabled = 1 ORDER BY p.display_name
     `),
   ]);

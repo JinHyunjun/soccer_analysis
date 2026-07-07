@@ -206,8 +206,8 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
         ) : (
           <div className="detail-empty large-empty">
             <BarChart3 size={28} />
-            <strong>이 경기의 팀 상세 통계는 아직 수집되지 않았습니다.</strong>
-            <span>API-Football 무료 키가 연결되고 상세 통계 동기화가 완료되면 슈팅, 점유율, 패스, xG 등이 표시됩니다.</span>
+            <strong>이 경기의 팀 상세 통계는 현재 무료 데이터 범위에 없습니다.</strong>
+            <span>API-Football 무료 플랜은 2026 시즌을 제공하지 않습니다. 허가된 무료 대체 데이터가 연결되면 슈팅, 점유율, 패스 등을 표시합니다.</span>
           </div>
         )}
       </section>
@@ -251,8 +251,8 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
         ) : (
           <div className="detail-empty large-empty">
             <Users size={28} />
-            <strong>선수별 기록이 아직 없습니다.</strong>
-            <span>상세 데이터가 제공되는 경기에서는 평점, 출전 시간, 슈팅, 패스, 태클, 경합을 한 화면에서 비교합니다.</span>
+            <strong>선수별 기록은 현재 무료 데이터 범위에 없습니다.</strong>
+            <span>2026 시즌 상세 데이터를 무료로 허용하는 공급자가 연결되면 평점, 출전 시간, 슈팅, 패스, 태클, 경합을 제공합니다.</span>
           </div>
         )}
       </section>

@@ -21,6 +21,26 @@ export const NOTION_RELEASE_PAGE_URL = "https://app.notion.com/p/396cb8895490817
 
 export const releases: readonly ReleaseNote[] = [
   {
+    version: "0.5.1",
+    date: "2026-07-07",
+    title: "외부 API 재인증과 무료 범위 정리",
+    summary: "새 인증값을 운영 환경에 반영하고, 무료 플랜에서 가능한 데이터와 불가능한 2026 상세 통계를 명확히 분리했습니다.",
+    highlights: [
+      "football-data.org 신규 토큰과 API-Football 최신 키를 공급자 원본 API에서 검증 후 Worker secret 교체",
+      "football-data.org 월드컵 경기와 5대 리그 순위 동기화 복구",
+      "API-Football 이적 수집은 유지하고 2026 상세 통계 반복 호출은 별도 기능 플래그로 중지",
+      "경기 상세 화면과 데이터 출처 카드에 API-Football 무료 플랜의 2026 시즌 제한 표시",
+    ],
+    validation: [
+      "football-data.org 월드컵 경기 7건 HTTP 200",
+      "football-data.org 경기·순위 운영 동기화 success",
+      "API-Football 최신 키 인증 성공 및 이전 키 거부 확인",
+      "API-Football 무료 플랜의 지원 시즌 응답(2022~2024) 확인",
+    ],
+    routes: ["/", "/matches/[id]", "/api/overview"],
+    commits: [],
+  },
+  {
     version: "0.5.0",
     date: "2026-07-07",
     title: "경기 데이터 신뢰도와 화면 전면 개선",

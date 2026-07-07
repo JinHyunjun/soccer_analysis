@@ -1372,7 +1372,7 @@ async function runScope(scope: SyncScope, env: IngestEnv): Promise<Record<string
     result.transfers = featureEnabled(env.ENABLE_API_FOOTBALL) ? await syncTransfers(env) : 0;
   }
   if (scope === "stats" || scope === "all") {
-    result.stats = featureEnabled(env.ENABLE_API_FOOTBALL) ? await syncApiFootballStats(env) : 0;
+    result.stats = featureEnabled(env.ENABLE_API_FOOTBALL_STATS) ? await syncApiFootballStats(env) : 0;
   }
   return result;
 }
@@ -1461,11 +1461,11 @@ async function runScheduled(cron: string, env: IngestEnv, scheduledAt: Date): Pr
       : 0;
   }
 
-  const bootstrapStats = featureEnabled(env.ENABLE_API_FOOTBALL)
+  const bootstrapStats = featureEnabled(env.ENABLE_API_FOOTBALL_STATS)
     && !optionalScopes.includes("stats")
     && await shouldBootstrapApiFootballStats(env, scheduledAt).catch(() => false);
   if (optionalScopes.includes("stats") || bootstrapStats) {
-    result.stats = featureEnabled(env.ENABLE_API_FOOTBALL)
+    result.stats = featureEnabled(env.ENABLE_API_FOOTBALL_STATS)
       ? await syncApiFootballStats(env).catch(() => 0)
       : 0;
   }
