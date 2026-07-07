@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getMatchStats } from "@/lib/db/match-stats";
+import { localizePlayerName } from "@/lib/localization";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +65,8 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
   if (!data) notFound();
 
   const { match, teamStats, playerStats, events } = data;
+  const homeTeamKo = match.home_team_ko;
+  const awayTeamKo = match.away_team_ko;
   const statRows = new Map<string, {
     label: string;
     description: string;
@@ -107,16 +110,16 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
         </div>
         <div className="scoreboard">
           <div className="score-team home-score-team">
-            <span className="score-team-mark">{match.home_team.slice(0, 2)}</span>
-            <h1>{match.home_team}</h1>
+            <span className="score-team-mark">{homeTeamKo.slice(0, 2)}</span>
+            <h1>{homeTeamKo}</h1>
           </div>
           <div className="score-centre">
             <div><strong>{match.home_score ?? "-"}</strong><span>:</span><strong>{match.away_score ?? "-"}</strong></div>
             <small><Clock3 size={13} /> {kickoffLabel(match.kickoff_at)}</small>
           </div>
           <div className="score-team away-score-team">
-            <span className="score-team-mark away-score-mark">{match.away_team.slice(0, 2)}</span>
-            <h1>{match.away_team}</h1>
+            <span className="score-team-mark away-score-mark">{awayTeamKo.slice(0, 2)}</span>
+            <h1>{awayTeamKo}</h1>
           </div>
         </div>
         <div className="provider-line"><Database size={13} /> 데이터 출처: {match.provider}</div>
@@ -137,7 +140,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
                     <time>{event.minute ?? "-"}{event.stoppage_minute ? `+${event.stoppage_minute}` : ""}&apos;</time>
                     <span className="event-dot" />
                     <div>
-                      <strong>{event.player_name ?? event.team_name ?? "경기 이벤트"}</strong>
+                      <strong>{event.player_name ? localizePlayerName(event.player_name) : (event.team_name ?? "경기 이벤트")}</strong>
                       <span>{eventLabel[event.event_type] ?? event.event_type} · {event.detail ? detailLabel[event.detail] ?? event.detail : "상세 미제공"}</span>
                     </div>
                     {event.home_score !== null && event.away_score !== null && (
@@ -170,7 +173,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
         </div>
         {statRows.size ? (
           <div className="team-stat-list">
-            <div className="team-stat-head"><strong>{match.home_team}</strong><span>지표</span><strong>{match.away_team}</strong></div>
+            <div className="team-stat-head"><strong>{homeTeamKo}</strong><span>지표</span><strong>{awayTeamKo}</strong></div>
             {Array.from(statRows.entries()).map(([code, row]) => {
               const home = displayStat(row.home?.value ?? null, row.home?.text ?? null, row.unit);
               const away = displayStat(row.away?.value ?? null, row.away?.text ?? null, row.unit);
@@ -207,8 +210,8 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
         {playerStats.length ? (
           <div className="player-team-columns">
             {[
-              { name: match.home_team, players: homePlayers },
-              { name: match.away_team, players: awayPlayers },
+              { name: homeTeamKo, players: homePlayers },
+              { name: awayTeamKo, players: awayPlayers },
             ].map((team) => (
               <div className="player-stat-team" key={team.name}>
                 <h3>{team.name}</h3>
@@ -218,7 +221,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
                     <tbody>
                       {team.players.map((player) => (
                         <tr key={player.player_id}>
-                          <td><strong>{player.player_name}</strong><small>{player.position ?? "-"}{player.substitute ? " · 교체" : ""}</small></td>
+                          <td><strong>{localizePlayerName(player.player_name)}</strong><small>{player.position ?? "-"}{player.substitute ? " · 교체" : ""}</small></td>
                           <td><b className="rating-chip">{compactValue(player.rating)}</b></td>
                           <td>{compactValue(player.minutes)}</td>
                           <td>{compactValue(player.goals)}</td>

@@ -1,5 +1,6 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { z } from "zod";
+import { localizeTeamName } from "@/lib/localization";
 
 const nullableNumber = z.number().nullable();
 const nullableText = z.string().nullable();
@@ -14,6 +15,8 @@ const matchSchema = z.object({
   away_team_id: z.string(),
   home_team: z.string(),
   away_team: z.string(),
+  home_short_name: nullableText,
+  away_short_name: nullableText,
   home_score: nullableNumber,
   away_score: nullableNumber,
   provider: z.string(),
@@ -80,7 +83,9 @@ export async function getMatchStats(matchId: string) {
     env.DB.prepare(`
       SELECT m.id, c.name AS competition, m.stage, m.kickoff_at, m.status,
              m.home_team_id, m.away_team_id,
-             ht.name AS home_team, at.name AS away_team, m.home_score, m.away_score,
+             ht.name AS home_team, at.name AS away_team,
+             ht.short_name AS home_short_name, at.short_name AS away_short_name,
+             m.home_score, m.away_score,
              p.display_name AS provider
       FROM matches m
       JOIN competitions c ON c.id = m.competition_id
@@ -126,7 +131,11 @@ export async function getMatchStats(matchId: string) {
   const match = z.array(matchSchema).parse(results[0].results)[0] ?? null;
   if (!match) return null;
   return {
-    match,
+    match: {
+      ...match,
+      home_team_ko: localizeTeamName(match.home_short_name, match.home_team),
+      away_team_ko: localizeTeamName(match.away_short_name, match.away_team),
+    },
     teamStats: z.array(teamStatSchema).parse(results[1].results),
     playerStats: z.array(playerStatSchema).parse(results[2].results),
     events: z.array(eventSchema).parse(results[3].results),

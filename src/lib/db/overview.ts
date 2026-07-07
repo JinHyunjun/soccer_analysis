@@ -9,7 +9,7 @@ import type {
   SourceMeta,
   TransferItem,
 } from "@/lib/domain";
-import { localizeCompetitionName, localizeStage, localizeTeamName } from "@/lib/localization";
+import { localizeCompetitionName, localizePlayerName, localizeStage, localizeTeamName } from "@/lib/localization";
 
 const nullableText = z.string().nullable();
 const matchRowSchema = z.object({
@@ -223,9 +223,9 @@ export async function getD1Overview(): Promise<OverviewData | null> {
   const transfers = z.array(transferRowSchema).parse(results[3].results).map<TransferItem>((row) => ({
     id: row.id,
     playerId: row.player_id ?? undefined,
-    playerName: row.player_name,
-    from: { id: row.from_team_id ?? `from-${row.id}`, name: row.from_team_name },
-    to: { id: row.to_team_id ?? `to-${row.id}`, name: row.to_team_name },
+    playerName: localizePlayerName(row.player_name),
+    from: { id: row.from_team_id ?? `from-${row.id}`, name: localizeTeamName(null, row.from_team_name) },
+    to: { id: row.to_team_id ?? `to-${row.id}`, name: localizeTeamName(null, row.to_team_name) },
     date: row.transfer_date,
     type: row.transfer_type ?? undefined,
     fee: row.fee_text ?? undefined,
