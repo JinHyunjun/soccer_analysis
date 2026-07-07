@@ -54,8 +54,8 @@ const transfersSchema = z.object({
       date: z.string(),
       type: z.string().nullish(),
       teams: z.object({
-        in: z.object({ id: z.number(), name: z.string() }),
-        out: z.object({ id: z.number(), name: z.string() }),
+        in: z.object({ id: z.number().nullable(), name: z.string() }),
+        out: z.object({ id: z.number().nullable(), name: z.string() }),
       }),
     })),
   })),
@@ -813,6 +813,8 @@ async function syncTransfers(env: IngestEnv): Promise<number> {
         `).bind(playerId, String(playerRecord.player.id), playerRecord.player.name, now));
 
         for (const transfer of playerRecord.transfers) {
+          // Skip transfers where either team ID is unknown (API returns null for untracked clubs).
+          if (transfer.teams.out.id === null || transfer.teams.in.id === null) continue;
           const fromId = `api-football:team:${transfer.teams.out.id}`;
           const toId = `api-football:team:${transfer.teams.in.id}`;
           const externalId = `${playerRecord.player.id}:${transfer.date}:${transfer.teams.out.id}:${transfer.teams.in.id}`;
