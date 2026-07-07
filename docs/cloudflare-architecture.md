@@ -1,6 +1,6 @@
 # Cloudflare 아키텍처
 
-조사·구현·배포 기준일: 2026-07-06
+조사·구현·배포 기준일: 2026-07-07
 
 ## 제품 선택
 
@@ -39,13 +39,15 @@
 | Cron | 기능 | 무료 한도 고려 |
 |---|---|---|
 | `*/30 * * * *` | OpenLigaDB 경기·득점, BBC/Transfermarkt RSS | 무료 공개 소스만 자동 호출하고 계정의 Cron Trigger 수를 1개만 사용 |
+| 같은 Cron의 `00:00/06:00/12:00/18:00 UTC` | 선택: football-data.org 순위, API-Football 이적 | 각 `ENABLE_*`가 켜진 경우에만 실행 |
+| 같은 Cron의 `03:30 UTC` | 선택: API-Football 경기 상세 통계 | `ENABLE_API_FOOTBALL=true`일 때만 실행 |
 
-football-data.org와 API-Football은 실제 키를 등록하고 `ENABLE_*` 변수를 켠 경우에만 관리자 수동 동기화로 호출합니다. 무료 호출량을 먼저 측정한 뒤 별도 Cron을 추가합니다.
+football-data.org와 API-Football은 실제 키를 등록하고 수동 검증한 뒤 `ENABLE_*` 변수를 켭니다. 현재 운영 환경에서는 두 기능 모두 꺼져 있습니다.
 
 ## D1 쓰기 원칙
 
 - 모든 외부 ID에 공급자 prefix 사용
-- `INSERT ... ON CONFLICT DO UPDATE`로 멱등성 확보
+- `INSERT ... ON CONFLICT DO UPDATE ... WHERE`로 값이 바뀐 행만 갱신
 - SQL 문자열에 외부 값을 삽입하지 않고 prepared statement `bind()` 사용
 - 여러 쓰기는 40개씩 `DB.batch()` 처리
 - 조회 컬럼과 정렬 조건에 인덱스 생성

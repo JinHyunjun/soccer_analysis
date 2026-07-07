@@ -9,6 +9,7 @@ import type {
   SourceMeta,
   TransferItem,
 } from "@/lib/domain";
+import { localizeCompetitionName, localizeStage, localizeTeamName } from "@/lib/localization";
 
 const nullableText = z.string().nullable();
 const matchRowSchema = z.object({
@@ -41,7 +42,7 @@ const marketValueRowSchema = z.object({
 });
 const providerRowSchema = z.object({
   id: z.string(), display_name: z.string(), attribution: nullableText, last_status: nullableText,
-  last_sync: nullableText, error_message: nullableText,
+  last_sync: nullableText, last_success: nullableText, error_message: nullableText,
 });
 
 type MatchRow = z.infer<typeof matchRowSchema>;
@@ -52,20 +53,20 @@ type ProviderRow = z.infer<typeof providerRowSchema>;
 function mapMatches(rows: MatchRow[]): MatchSummary[] {
   return rows.map((row) => ({
     id: row.id,
-    competition: row.competition_name,
-    stage: row.stage ?? undefined,
+    competition: localizeCompetitionName(row.competition_name),
+    stage: localizeStage(row.stage),
     kickoff: row.kickoff_at,
     status: row.status,
     minute: row.minute ?? undefined,
     home: {
       id: row.home_team_id,
-      name: row.home_team_name,
+      name: localizeTeamName(row.home_short_name, row.home_team_name),
       shortName: row.home_short_name ?? undefined,
       crest: row.home_crest_url ?? undefined,
     },
     away: {
       id: row.away_team_id,
-      name: row.away_team_name,
+      name: localizeTeamName(row.away_short_name, row.away_team_name),
       shortName: row.away_short_name ?? undefined,
       crest: row.away_crest_url ?? undefined,
     },
@@ -80,7 +81,7 @@ function mapTables(rows: StandingRow[]): LeagueTable[] {
   for (const row of rows) {
     const table = grouped.get(row.competition_id) ?? {
       code: row.competition_code ?? row.competition_id,
-      name: row.competition_name,
+      name: localizeCompetitionName(row.competition_name),
       type: row.competition_type ?? "LEAGUE",
       source: row.provider_name,
       rows: [],
@@ -89,7 +90,7 @@ function mapTables(rows: StandingRow[]): LeagueTable[] {
       position: row.position,
       team: {
         id: row.team_id,
-        name: row.team_name,
+        name: localizeTeamName(row.team_short_name, row.team_name),
         shortName: row.team_short_name ?? undefined,
         crest: row.crest_url ?? undefined,
       },
@@ -118,13 +119,25 @@ function mapNews(rows: NewsRow[]): NewsItem[] {
 }
 
 function mapSources(rows: ProviderRow[]): SourceMeta[] {
-  return rows.map((row) => ({
-    provider: row.display_name,
-    state: row.last_status === "success" ? "cached" : row.last_status === "partial" ? "cached" : "unavailable",
-    updatedAt: row.last_sync ?? new Date(0).toISOString(),
-    attribution: row.attribution ?? undefined,
-    note: row.error_message ?? (row.last_sync ? `D1 마지막 동기화: ${row.last_sync}` : "아직 동기화되지 않았습니다."),
-  }));
+  return rows.map((row) => {
+    const usableAt = row.last_success ?? (row.last_status === "partial" ? row.last_sync : null);
+    const note = row.last_status === "running" && usableAt
+      ? `현재 갱신 중 · 마지막 성공: ${usableAt}`
+      : row.error_message && usableAt
+        ? `최근 동기화 실패: ${row.error_message} · 마지막 성공 데이터 유지: ${usableAt}`
+        : row.error_message
+          ? row.error_message
+          : usableAt
+            ? `D1 마지막 성공: ${usableAt}`
+            : "아직 동기화되지 않았습니다.";
+    return {
+      provider: row.display_name,
+      state: usableAt ? "cached" : "unavailable",
+      updatedAt: usableAt ?? row.last_sync ?? new Date(0).toISOString(),
+      attribution: row.attribution ?? undefined,
+      note,
+    };
+  });
 }
 
 export async function getD1Overview(): Promise<OverviewData | null> {
@@ -196,6 +209,9 @@ export async function getD1Overview(): Promise<OverviewData | null> {
       SELECT p.id, p.display_name, p.attribution,
              (SELECT sr.status FROM sync_runs sr WHERE sr.provider_id = p.id ORDER BY sr.started_at DESC LIMIT 1) AS last_status,
              (SELECT sr.finished_at FROM sync_runs sr WHERE sr.provider_id = p.id ORDER BY sr.started_at DESC LIMIT 1) AS last_sync,
+             (SELECT sr.finished_at FROM sync_runs sr
+              WHERE sr.provider_id = p.id AND sr.status IN ('success', 'partial')
+              ORDER BY sr.started_at DESC LIMIT 1) AS last_success,
              (SELECT sr.error_message FROM sync_runs sr WHERE sr.provider_id = p.id ORDER BY sr.started_at DESC LIMIT 1) AS error_message
       FROM providers p WHERE p.enabled = 1 ORDER BY p.display_name
     `),

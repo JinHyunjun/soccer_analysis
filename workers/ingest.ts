@@ -295,9 +295,18 @@ async function withSyncRun(
     return records;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown sync error";
-    await env.DB.prepare(`
-      UPDATE sync_runs SET status = 'failed', finished_at = ?, error_message = ? WHERE id = ?
-    `).bind(new Date().toISOString(), message.slice(0, 1000), id).run();
+    try {
+      await env.DB.prepare(`
+        UPDATE sync_runs SET status = 'failed', finished_at = ?, error_message = ? WHERE id = ?
+      `).bind(new Date().toISOString(), message.slice(0, 1000), id).run();
+    } catch (recordError) {
+      console.error(JSON.stringify({
+        message: "failed to persist sync failure",
+        providerId,
+        syncType,
+        error: recordError instanceof Error ? recordError.message : "Unknown D1 error",
+      }));
+    }
     throw error;
   }
 }
@@ -318,6 +327,9 @@ function upsertTeam(db: D1Database, team: z.infer<typeof teamSchema>, now: strin
     ON CONFLICT(provider_id, external_id) DO UPDATE SET
       name = excluded.name, short_name = excluded.short_name,
       crest_url = excluded.crest_url, updated_at = excluded.updated_at
+    WHERE teams.name IS NOT excluded.name
+       OR teams.short_name IS NOT excluded.short_name
+       OR teams.crest_url IS NOT excluded.crest_url
   `).bind(id, String(team.id), team.name, team.shortName ?? null, team.crest ?? null, now);
 }
 
@@ -326,16 +338,25 @@ async function syncFootballDataMatches(env: IngestEnv): Promise<number> {
     // Free plan blocks the global /matches endpoint — query per competition instead.
     const codes = env.FOOTBALL_DATA_COMPETITIONS.split(",").map((c) => c.trim()).filter(Boolean).slice(0, 6);
     const allMatches: z.infer<typeof matchesSchema>["matches"] = [];
+    const errors: string[] = [];
+    let successfulRequests = 0;
     for (const code of codes) {
       try {
         const p = matchesSchema.parse(await footballDataRequest(
           `/competitions/${encodeURIComponent(code)}/matches?dateFrom=${todayUtc(-1)}&dateTo=${todayUtc(3)}`,
           env,
         ));
+        successfulRequests += 1;
         allMatches.push(...p.matches);
-      } catch {
-        // skip unavailable competition and continue
+      } catch (error) {
+        errors.push(`${code}: ${error instanceof Error ? error.message : "unknown error"}`);
       }
+    }
+    if (successfulRequests === 0) {
+      throw new Error(`football-data.org match sync failed for every competition: ${errors.join(" | ").slice(0, 800)}`);
+    }
+    if (errors.length > 0) {
+      console.warn(JSON.stringify({ message: "football-data.org partial match sync", errors }));
     }
     const now = new Date().toISOString();
     const statements: D1PreparedStatement[] = [];
@@ -349,6 +370,9 @@ async function syncFootballDataMatches(env: IngestEnv): Promise<number> {
           ON CONFLICT(provider_id, external_id) DO UPDATE SET
             code = excluded.code, name = excluded.name,
             competition_type = excluded.competition_type, updated_at = excluded.updated_at
+          WHERE competitions.code IS NOT excluded.code
+             OR competitions.name IS NOT excluded.name
+             OR competitions.competition_type IS NOT excluded.competition_type
         `).bind(
           competitionId,
           String(match.competition.id),
@@ -370,6 +394,15 @@ async function syncFootballDataMatches(env: IngestEnv): Promise<number> {
             home_team_id = excluded.home_team_id, away_team_id = excluded.away_team_id,
             home_score = excluded.home_score, away_score = excluded.away_score,
             updated_at = excluded.updated_at
+          WHERE matches.competition_id IS NOT excluded.competition_id
+             OR matches.stage IS NOT excluded.stage
+             OR matches.kickoff_at IS NOT excluded.kickoff_at
+             OR matches.status IS NOT excluded.status
+             OR matches.minute IS NOT excluded.minute
+             OR matches.home_team_id IS NOT excluded.home_team_id
+             OR matches.away_team_id IS NOT excluded.away_team_id
+             OR matches.home_score IS NOT excluded.home_score
+             OR matches.away_score IS NOT excluded.away_score
         `).bind(
           `football-data:match:${match.id}`,
           String(match.id),
@@ -407,6 +440,20 @@ function safeRemoteImageUrl(value: string | null | undefined): string | null {
   }
 }
 
+export function resolveOpenLigaScore(
+  matchResults: Array<{ pointsTeam1: number; pointsTeam2: number; resultOrderID: number }>,
+  goals: Array<{ goalID: number; scoreTeam1: number; scoreTeam2: number }>,
+): { home: number | null; away: number | null } {
+  const finalResult = [...matchResults].sort((a, b) => b.resultOrderID - a.resultOrderID)[0];
+  const lastGoal = goals.length > 0
+    ? goals.reduce((previous, current) => current.goalID > previous.goalID ? current : previous)
+    : null;
+  return {
+    home: lastGoal?.scoreTeam1 ?? finalResult?.pointsTeam1 ?? null,
+    away: lastGoal?.scoreTeam2 ?? finalResult?.pointsTeam2 ?? null,
+  };
+}
+
 async function syncOpenLigaMatches(env: IngestEnv): Promise<number> {
   return withSyncRun(env, "openligadb", "matches", async () => {
     const leagues = env.OPENLIGADB_LEAGUES.split(",")
@@ -432,15 +479,10 @@ async function syncOpenLigaMatches(env: IngestEnv): Promise<number> {
         const awayTeamId = `openligadb:team:${match.team2.teamId}`;
         const matchId = `openligadb:match:${match.matchID}`;
         const kickoffAt = match.matchDateTimeUTC ?? `${match.matchDateTime}Z`;
-        const finalResult = [...match.matchResults].sort((a, b) => b.resultOrderID - a.resultOrderID)[0];
         // OpenLigaDB does not update matchResults in real-time during live play; the goals array
         // carries the authoritative running score. Use it first; fall back to matchResults when
         // no goals have been recorded yet (pre-match or genuinely 0-0 start).
-        const lastGoal = match.goals.length > 0
-          ? match.goals.reduce((prev, curr) => curr.goalID > prev.goalID ? curr : prev)
-          : null;
-        const homeScore = lastGoal?.scoreTeam1 ?? finalResult?.pointsTeam1 ?? null;
-        const awayScore = lastGoal?.scoreTeam2 ?? finalResult?.pointsTeam2 ?? null;
+        const score = resolveOpenLigaScore(match.matchResults, match.goals);
 
         statements.push(
           env.DB.prepare(`
@@ -448,6 +490,8 @@ async function syncOpenLigaMatches(env: IngestEnv): Promise<number> {
             VALUES (?, 'openligadb', ?, ?, ?, 'CUP', ?)
             ON CONFLICT(provider_id, external_id) DO UPDATE SET
               code = excluded.code, name = excluded.name, updated_at = excluded.updated_at
+            WHERE competitions.code IS NOT excluded.code
+               OR competitions.name IS NOT excluded.name
           `).bind(competitionId, String(match.leagueId), match.leagueShortcut, match.leagueName, now),
           env.DB.prepare(`
             INSERT INTO teams (id, provider_id, external_id, name, short_name, crest_url, updated_at)
@@ -455,6 +499,9 @@ async function syncOpenLigaMatches(env: IngestEnv): Promise<number> {
             ON CONFLICT(provider_id, external_id) DO UPDATE SET
               name = excluded.name, short_name = excluded.short_name,
               crest_url = excluded.crest_url, updated_at = excluded.updated_at
+            WHERE teams.name IS NOT excluded.name
+               OR teams.short_name IS NOT excluded.short_name
+               OR teams.crest_url IS NOT excluded.crest_url
           `).bind(
             homeTeamId,
             String(match.team1.teamId),
@@ -469,6 +516,9 @@ async function syncOpenLigaMatches(env: IngestEnv): Promise<number> {
             ON CONFLICT(provider_id, external_id) DO UPDATE SET
               name = excluded.name, short_name = excluded.short_name,
               crest_url = excluded.crest_url, updated_at = excluded.updated_at
+            WHERE teams.name IS NOT excluded.name
+               OR teams.short_name IS NOT excluded.short_name
+               OR teams.crest_url IS NOT excluded.crest_url
           `).bind(
             awayTeamId,
             String(match.team2.teamId),
@@ -487,6 +537,13 @@ async function syncOpenLigaMatches(env: IngestEnv): Promise<number> {
               home_team_id = excluded.home_team_id, away_team_id = excluded.away_team_id,
               home_score = excluded.home_score, away_score = excluded.away_score,
               updated_at = excluded.updated_at
+            WHERE matches.stage IS NOT excluded.stage
+               OR matches.kickoff_at IS NOT excluded.kickoff_at
+               OR matches.status IS NOT excluded.status
+               OR matches.home_team_id IS NOT excluded.home_team_id
+               OR matches.away_team_id IS NOT excluded.away_team_id
+               OR matches.home_score IS NOT excluded.home_score
+               OR matches.away_score IS NOT excluded.away_score
           `).bind(
             matchId,
             String(match.matchID),
@@ -496,8 +553,8 @@ async function syncOpenLigaMatches(env: IngestEnv): Promise<number> {
             normalizeOpenLigaStatus(match.matchIsFinished, kickoffAt),
             homeTeamId,
             awayTeamId,
-            homeScore,
-            awayScore,
+            score.home,
+            score.away,
             now,
           ),
         );
@@ -512,6 +569,7 @@ async function syncOpenLigaMatches(env: IngestEnv): Promise<number> {
               VALUES (?, 'openligadb', ?, ?, ?)
               ON CONFLICT(provider_id, external_id) DO UPDATE SET
                 name = excluded.name, updated_at = excluded.updated_at
+              WHERE players.name IS NOT excluded.name
             `).bind(playerId, String(goal.goalGetterID), goal.goalGetterName, now));
           }
           const detail = goal.isOwnGoal ? "own_goal" : goal.isPenalty ? "penalty" : "normal_goal";
@@ -528,6 +586,13 @@ async function syncOpenLigaMatches(env: IngestEnv): Promise<number> {
               player_name = excluded.player_name, detail = excluded.detail,
               home_score = excluded.home_score, away_score = excluded.away_score,
               updated_at = excluded.updated_at
+            WHERE match_events.minute IS NOT excluded.minute
+               OR match_events.team_id IS NOT excluded.team_id
+               OR match_events.player_id IS NOT excluded.player_id
+               OR match_events.player_name IS NOT excluded.player_name
+               OR match_events.detail IS NOT excluded.detail
+               OR match_events.home_score IS NOT excluded.home_score
+               OR match_events.away_score IS NOT excluded.away_score
           `).bind(
             `openligadb:event:${goal.goalID}`,
             matchId,
@@ -561,8 +626,17 @@ async function syncStandings(env: IngestEnv): Promise<number> {
   return withSyncRun(env, "football-data", "standings", async () => {
     const codes = env.FOOTBALL_DATA_COMPETITIONS.split(",").map((value) => value.trim()).filter(Boolean).slice(0, 6);
     let written = 0;
+    let successfulRequests = 0;
+    const errors: string[] = [];
     for (const code of codes) {
-      const payload = standingsSchema.parse(await footballDataRequest(`/competitions/${encodeURIComponent(code)}/standings`, env));
+      let payload: z.infer<typeof standingsSchema>;
+      try {
+        payload = standingsSchema.parse(await footballDataRequest(`/competitions/${encodeURIComponent(code)}/standings`, env));
+        successfulRequests += 1;
+      } catch (error) {
+        errors.push(`${code}: ${error instanceof Error ? error.message : "unknown error"}`);
+        continue;
+      }
       const total = payload.standings.find((standing) => standing.type === "TOTAL") ?? payload.standings[0];
       if (!total) continue;
       const now = new Date().toISOString();
@@ -574,6 +648,9 @@ async function syncStandings(env: IngestEnv): Promise<number> {
           ON CONFLICT(provider_id, external_id) DO UPDATE SET
             code = excluded.code, name = excluded.name,
             competition_type = excluded.competition_type, updated_at = excluded.updated_at
+          WHERE competitions.code IS NOT excluded.code
+             OR competitions.name IS NOT excluded.name
+             OR competitions.competition_type IS NOT excluded.competition_type
         `).bind(
           competitionId,
           String(payload.competition.id),
@@ -596,6 +673,14 @@ async function syncStandings(env: IngestEnv): Promise<number> {
               played = excluded.played, won = excluded.won, drawn = excluded.drawn,
               lost = excluded.lost, goal_difference = excluded.goal_difference,
               points = excluded.points, updated_at = excluded.updated_at
+            WHERE standing_rows.position IS NOT excluded.position
+               OR standing_rows.team_name IS NOT excluded.team_name
+               OR standing_rows.played IS NOT excluded.played
+               OR standing_rows.won IS NOT excluded.won
+               OR standing_rows.drawn IS NOT excluded.drawn
+               OR standing_rows.lost IS NOT excluded.lost
+               OR standing_rows.goal_difference IS NOT excluded.goal_difference
+               OR standing_rows.points IS NOT excluded.points
           `).bind(
             competitionId,
             payload.season.startDate.slice(0, 4),
@@ -613,6 +698,12 @@ async function syncStandings(env: IngestEnv): Promise<number> {
         );
       }
       written += await runBatches(env.DB, statements);
+    }
+    if (successfulRequests === 0) {
+      throw new Error(`football-data.org standings failed for every competition: ${errors.join(" | ").slice(0, 800)}`);
+    }
+    if (errors.length > 0) {
+      console.warn(JSON.stringify({ message: "football-data.org partial standings sync", errors }));
     }
     return written;
   });
@@ -1106,20 +1197,31 @@ async function runScope(scope: SyncScope, env: IngestEnv): Promise<Record<string
   return result;
 }
 
-// Returns UTC hour and minute from a Date, used to schedule optional syncs
-// within the single free-plan cron trigger (*/30 * * * *).
-//
-// API-Football budget: ~100 req/day free.
-// - Transfers (3 teams × 1 req): runs at UTC 0:15, 6:15, 12:15, 18:15 → 4 × 3 = 12 req/day
-// - Stats (≤8 fixtures × 2 req + 1 list req): runs at UTC 3:45 → ≤17 req/day
-// - football-data.org standings (6 comps × 1 req): runs at UTC 0:00, 6:00, 12:00, 18:00 → 24 req/day
-// Total per-day API-Football: ~29 req — safely under the 100 req/day free limit.
-function shouldRunAtUtc(nowUtc: Date, targetHour: number, targetMinute: number): boolean {
-  return nowUtc.getUTCHours() === targetHour && nowUtc.getUTCMinutes() === targetMinute;
+export function optionalScheduledScopes(nowUtc: Date): Array<"standings" | "transfers" | "stats"> {
+  const hour = nowUtc.getUTCHours();
+  const minute = nowUtc.getUTCMinutes();
+  const scopes: Array<"standings" | "transfers" | "stats"> = [];
+
+  // These times all occur on a */30 trigger. Key-based providers remain gated
+  // by their ENABLE_* flags, so public feeds continue when keys are unavailable.
+  if (minute === 0 && hour % 6 === 0) scopes.push("standings", "transfers");
+  if (hour === 3 && minute === 30) scopes.push("stats");
+  return scopes;
 }
 
-async function runScheduled(cron: string, env: IngestEnv): Promise<void> {
-  if (cron !== "*/5 * * * *" && cron !== "*/30 * * * *") {
+async function cleanupStaleSyncRuns(env: IngestEnv, nowUtc: Date): Promise<number> {
+  const cutoff = new Date(nowUtc.getTime() - 45 * 60 * 1000).toISOString();
+  const result = await env.DB.prepare(`
+    UPDATE sync_runs
+    SET status = 'failed', finished_at = ?,
+        error_message = COALESCE(error_message, 'Sync did not complete before the next scheduled run')
+    WHERE status = 'running' AND started_at < ?
+  `).bind(nowUtc.toISOString(), cutoff).run();
+  return result.meta.changes ?? 0;
+}
+
+async function runScheduled(cron: string, env: IngestEnv, scheduledAt: Date): Promise<void> {
+  if (cron !== "*/30 * * * *") {
     // Dedicated single-scope crons (e.g. if split crons are added later).
     const scope: SyncScope = cron === "0 * * * *"
         ? "standings"
@@ -1133,38 +1235,40 @@ async function runScheduled(cron: string, env: IngestEnv): Promise<void> {
     return;
   }
 
-  const now = new Date();
-  const h = now.getUTCHours();
-  const m = now.getUTCMinutes();
+  const staleRuns = await cleanupStaleSyncRuns(env, scheduledAt).catch((error) => {
+    console.error(JSON.stringify({
+      message: "failed to clean stale sync runs",
+      error: error instanceof Error ? error.message : "Unknown D1 error",
+    }));
+    return 0;
+  });
 
   // Always: matches (OpenLigaDB + football-data.org) + RSS news
   const result: Record<string, number> = {
     matches: await syncMatches(env),
     news: await syncNews(env),
   };
+  const optionalScopes = optionalScheduledScopes(scheduledAt);
 
-  // football-data.org standings — every 6 hours at :00
-  if (m === 0 && (h === 0 || h === 6 || h === 12 || h === 18)) {
+  if (optionalScopes.includes("standings")) {
     result.standings = featureEnabled(env.ENABLE_FOOTBALL_DATA)
       ? await syncStandings(env).catch(() => 0)
       : 0;
   }
 
-  // API-Football transfers — every 6 hours at :15
-  if (m === 15 && (h === 0 || h === 6 || h === 12 || h === 18)) {
+  if (optionalScopes.includes("transfers")) {
     result.transfers = featureEnabled(env.ENABLE_API_FOOTBALL)
       ? await syncTransfers(env).catch(() => 0)
       : 0;
   }
 
-  // API-Football match stats — once daily at 03:45 UTC (KST 12:45)
-  if (shouldRunAtUtc(now, 3, 45)) {
+  if (optionalScopes.includes("stats")) {
     result.stats = featureEnabled(env.ENABLE_API_FOOTBALL)
       ? await syncApiFootballStats(env).catch(() => 0)
       : 0;
   }
 
-  console.log(JSON.stringify({ message: "scheduled public sync complete", cron, result }));
+  console.log(JSON.stringify({ message: "scheduled public sync complete", cron, staleRuns, result }));
 }
 
 export default {
@@ -1202,6 +1306,6 @@ export default {
   },
 
   scheduled(controller: ScheduledController, env: IngestEnv, ctx: ExecutionContext): void {
-    ctx.waitUntil(runScheduled(controller.cron, env));
+    ctx.waitUntil(runScheduled(controller.cron, env, new Date(controller.scheduledTime)));
   },
 } satisfies ExportedHandler<IngestEnv>;
