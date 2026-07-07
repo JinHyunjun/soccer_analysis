@@ -298,6 +298,11 @@ footer a:hover, .site-footer a:hover { color: var(--lime); }
 .current-release-card span { color: var(--muted); font-size: 9px; font-weight: 800; }
 .current-release-card strong { font-size: 18px; }
 .current-release-card time { grid-column: 3; grid-row: 1 / 3; color: var(--muted); font-size: 9px; }
+.notion-source-banner { min-height: 62px; display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: 18px; padding: 13px 16px; border: 1px solid rgba(86,214,201,.22); border-radius: 12px; background: rgba(86,214,201,.055); }
+.notion-source-banner > div { display: flex; flex-direction: column; gap: 4px; }
+.notion-source-banner strong { font-size: 10px; }
+.notion-source-banner span { color: var(--muted); font-size: 9px; }
+.notion-source-banner a { display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto; color: var(--cyan); font-size: 9px; font-weight: 800; }
 .release-layout { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 42px; margin-top: 36px; align-items: start; }
 .release-index { position: sticky; top: 24px; display: flex; flex-direction: column; gap: 5px; }
 .release-index > .eyebrow { margin-bottom: 10px; }
@@ -461,6 +466,7 @@ footer a:hover, .site-footer a:hover { color: var(--lime); }
   .release-heading { align-items: stretch; flex-direction: column; }
   .release-heading h1 { font-size: 39px; }
   .current-release-card { min-width: 0; }
+  .notion-source-banner { align-items: flex-start; flex-direction: column; }
   .release-layout { grid-template-columns: 1fr; gap: 20px; }
   .release-index { position: static; display: grid; grid-template-columns: repeat(3, 1fr); }
   .release-index > .eyebrow, .release-index > a:last-child { grid-column: 1 / -1; }

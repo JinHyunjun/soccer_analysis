@@ -1,11 +1,14 @@
-import { currentRelease, releases } from "@/content/releases";
+import { NOTION_RELEASE_PAGE_URL } from "@/content/releases";
+import { getReleaseFeed } from "@/lib/notion-releases";
 
-export function GET() {
+export async function GET() {
+  const feed = await getReleaseFeed();
   return Response.json(
     {
       service: "SOCCER/KR",
-      currentVersion: currentRelease.version,
-      releases,
+      currentVersion: feed.releases[0]?.version ?? null,
+      notionPageUrl: NOTION_RELEASE_PAGE_URL,
+      ...feed,
     },
     {
       headers: {

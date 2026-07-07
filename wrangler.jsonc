@@ -7,6 +7,9 @@
     "nodejs_compat",
     "global_fetch_strictly_public"
   ],
+  "vars": {
+    "NOTION_RELEASE_PAGE_ID": "396cb889-5490-8174-8930-d92fd26da2b4"
+  },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"

@@ -9,7 +9,36 @@ export type ReleaseNote = {
   commits?: readonly string[];
 };
 
+export type ReleaseFeed = {
+  releases: readonly ReleaseNote[];
+  fetchedAt: string;
+  source: "notion" | "cache" | "snapshot";
+  stale: boolean;
+};
+
+export const NOTION_RELEASE_PAGE_ID = "396cb889-5490-8174-8930-d92fd26da2b4";
+export const NOTION_RELEASE_PAGE_URL = "https://app.notion.com/p/396cb889549081748930d92fd26da2b4";
+
 export const releases: readonly ReleaseNote[] = [
+  {
+    version: "0.4.1",
+    date: "2026-07-07",
+    title: "Notion 릴리즈 노트 연동",
+    summary: "Notion을 릴리즈 기록의 단일 원본으로 삼고 운영 사이트가 변경 내용을 자동으로 읽도록 전환했습니다.",
+    highlights: [
+      "SOCCER/KR 프로젝트 아래에 공개용 Notion 릴리즈 노트 생성",
+      "Notion 블록을 읽어 /releases와 /api/releases에 반영하는 연동 추가",
+      "Cloudflare D1에 5분 캐시를 저장해 Notion 장애 시 마지막 정상 데이터 유지",
+      "Notion 미연결·오류 상황에서는 검증된 내장 스냅샷으로 안전하게 대체",
+    ],
+    validation: [
+      "Notion 블록 파서 자동 테스트",
+      "캐시·스냅샷 장애 처리 검증",
+      "Cloudflare 배포 후 릴리즈 화면과 JSON API 확인",
+    ],
+    routes: ["/releases", "/api/releases"],
+    commits: [],
+  },
   {
     version: "0.4.0",
     date: "2026-07-07",
@@ -92,3 +121,10 @@ export const releases: readonly ReleaseNote[] = [
 ] as const;
 
 export const currentRelease = releases[0];
+
+export const FALLBACK_RELEASE_FEED: ReleaseFeed = {
+  releases,
+  fetchedAt: "2026-07-07T00:00:00.000Z",
+  source: "snapshot",
+  stale: true,
+};

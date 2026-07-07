@@ -1,3 +1,4 @@
 SYNC_ADMIN_TOKEN=replace-with-a-long-random-value
 FOOTBALL_DATA_TOKEN=your-free-football-data-token
 API_FOOTBALL_KEY=your-free-api-football-key
+NOTION_TOKEN=your-notion-integration-token
