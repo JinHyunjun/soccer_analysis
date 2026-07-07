@@ -516,8 +516,8 @@ export function resolveOpenLigaScore(
     ? timedGoals.reduce((previous, current) => current.goalID > previous.goalID ? current : previous)
     : null;
   return {
-    home: lastTimedGoal?.scoreTeam1 ?? mainResult?.pointsTeam1 ?? null,
-    away: lastTimedGoal?.scoreTeam2 ?? mainResult?.pointsTeam2 ?? null,
+    home: shootout ? mainResult?.pointsTeam1 ?? null : lastTimedGoal?.scoreTeam1 ?? mainResult?.pointsTeam1 ?? null,
+    away: shootout ? mainResult?.pointsTeam2 ?? null : lastTimedGoal?.scoreTeam2 ?? mainResult?.pointsTeam2 ?? null,
     homePenalties: shootout?.pointsTeam1 ?? null,
     awayPenalties: shootout?.pointsTeam2 ?? null,
   };

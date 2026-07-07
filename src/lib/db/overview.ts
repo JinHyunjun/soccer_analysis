@@ -128,8 +128,13 @@ function mapNews(rows: NewsRow[]): NewsItem[] {
 function mapSources(rows: ProviderRow[]): SourceMeta[] {
   return rows.map((row) => {
     const usableAt = row.last_success ?? (row.last_status === "partial" ? row.last_sync : null);
+    const authenticationIssue = /invalid|missing application key|token/i.test(row.error_message ?? "");
     const note = row.last_status === "running" && usableAt
       ? `현재 갱신 중 · 마지막 성공: ${usableAt}`
+      : authenticationIssue && usableAt
+        ? `공급자 인증 확인이 필요합니다. 마지막 정상 데이터: ${usableAt}`
+        : authenticationIssue
+          ? "공급자 인증 확인이 필요합니다."
       : row.error_message && usableAt
         ? `일부 데이터 갱신이 지연되고 있습니다. 마지막 정상 데이터: ${usableAt}`
         : row.error_message
