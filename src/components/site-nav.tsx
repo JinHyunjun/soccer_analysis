@@ -5,6 +5,8 @@ const navItems = [
   { href: "/matches", label: "경기" },
   { href: "/standings", label: "순위표" },
   { href: "/transfers", label: "이적·뉴스" },
+  { href: "/tech-stack", label: "기술 스택" },
+  { href: "/releases", label: "릴리즈" },
 ];
 
 export function SiteNav({ active }: { active: string }) {
@@ -20,6 +22,7 @@ export function SiteNav({ active }: { active: string }) {
             key={item.href}
             href={item.href}
             className={active === item.href ? "nav-active" : ""}
+            aria-current={active === item.href ? "page" : undefined}
           >
             {item.label}
           </Link>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
 import { LeagueTable } from "@/components/league-table";
 import { getFullStandingsFromDB } from "@/lib/db/overview";
@@ -79,18 +80,7 @@ export default async function StandingsPage({
         )}
       </div>
 
-      <footer className="site-footer">
-        <div className="brand footer-brand">
-          <span className="brand-ball">S</span>
-          <span>SOCCER<span className="brand-accent">/KR</span></span>
-        </div>
-        <p>무료 데이터로 시작하되, 출처와 권리를 흐리지 않습니다.</p>
-        <div>
-          <Link href="/">홈</Link>
-          <Link href="/matches">경기</Link>
-          <Link href="/transfers">이적·뉴스</Link>
-        </div>
-      </footer>
+      <SiteFooter />
     </main>
   );
 }

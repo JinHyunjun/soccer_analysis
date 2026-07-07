@@ -1,5 +1,5 @@
 import { ArrowRight, BadgeCheck, Newspaper, Rss } from "lucide-react";
-import Link from "next/link";
+import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
 import { NewsGrid } from "@/components/news-grid";
 import { getOverview } from "@/lib/services/overview";
@@ -86,18 +86,7 @@ export default async function TransfersPage() {
         </div>
       </div>
 
-      <footer className="site-footer">
-        <div className="brand footer-brand">
-          <span className="brand-ball">S</span>
-          <span>SOCCER<span className="brand-accent">/KR</span></span>
-        </div>
-        <p>무료 데이터로 시작하되, 출처와 권리를 흐리지 않습니다.</p>
-        <div>
-          <Link href="/">홈</Link>
-          <Link href="/matches">경기</Link>
-          <Link href="/standings">순위표</Link>
-        </div>
-      </footer>
+      <SiteFooter />
     </main>
   );
 }

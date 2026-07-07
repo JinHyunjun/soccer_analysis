@@ -39,7 +39,7 @@ button { font: inherit; }
 .brand { display: inline-flex; gap: 10px; align-items: center; font-size: 17px; font-weight: 900; letter-spacing: -.03em; }
 .brand-ball { display: grid; place-items: center; width: 29px; height: 29px; border-radius: 50%; color: #07100d; background: var(--lime); font-size: 14px; transform: rotate(-8deg); }
 .brand-accent { color: var(--lime); }
-nav { display: flex; gap: 30px; color: #c0cbc5; font-size: 14px; font-weight: 700; }
+nav { display: flex; gap: 23px; color: #c0cbc5; font-size: 13px; font-weight: 700; }
 nav a:hover { color: var(--lime); }
 nav a.nav-active { color: var(--lime); }
 .header-actions { display: flex; align-items: center; gap: 8px; }
@@ -177,7 +177,7 @@ nav a.nav-active { color: var(--lime); }
 footer, .site-footer { width: min(1240px, calc(100% - 40px)); margin: 90px auto 0; min-height: 120px; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 25px; color: var(--muted); font-size: 10px; padding-bottom: 30px; }
 .footer-brand { color: var(--text); }
 footer p, .site-footer p { flex: 1; }
-footer > div:last-child, .site-footer > div:last-child { display: flex; gap: 15px; }
+footer > div:last-child, .site-footer > div:last-child { display: flex; flex-wrap: wrap; gap: 15px; }
 footer a:hover, .site-footer a:hover { color: var(--lime); }
 
 /* ── 새 레이아웃 공통 ── */
@@ -263,6 +263,69 @@ footer a:hover, .site-footer a:hover { color: var(--lime); }
 .transfers-col .transfer-row { grid-template-columns: 34px 1fr; }
 .transfers-col .club-route { grid-column: 1 / -1; padding-left: 46px; font-size: 10px; }
 .transfers-col .source-small { display: none; }
+
+/* ── 기술 스택 · 릴리즈 노트 ── */
+.info-page { padding-top: 64px; }
+.info-hero { min-height: 300px; display: grid; grid-template-columns: 1.1fr .9fr; gap: 70px; align-items: center; padding: 44px; border: 1px solid var(--line); border-radius: 24px; background: radial-gradient(circle at 15% 10%, rgba(184,243,61,.12), transparent 24rem), linear-gradient(145deg, rgba(17,31,25,.98), rgba(8,18,14,.98)); }
+.info-hero h1 { margin: 12px 0 0; font-size: clamp(38px, 5vw, 62px); line-height: 1.03; letter-spacing: -.065em; }
+.info-hero h1 em { color: var(--lime); font-style: normal; }
+.info-hero > p { margin: 0; color: #a8b5ae; font-size: 14px; line-height: 1.9; word-break: keep-all; }
+.stack-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 18px; }
+.stack-card { min-width: 0; padding: 24px; border: 1px solid var(--line); border-radius: 16px; background: linear-gradient(145deg, rgba(17,31,25,.96), rgba(9,20,15,.96)); }
+.stack-card > svg { color: var(--lime); margin-bottom: 24px; }
+.stack-card h2 { margin: 7px 0 18px; font-size: 19px; letter-spacing: -.04em; }
+.stack-card ul { margin: 0; padding: 0; list-style: none; }
+.stack-card li { min-height: 32px; display: flex; align-items: center; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,.055); color: #d8e0dc; font-size: 11px; }
+.stack-card li::before { content: ""; width: 5px; height: 5px; margin-right: 8px; border-radius: 50%; background: var(--lime); box-shadow: 0 0 8px rgba(184,243,61,.45); }
+.stack-card p { margin: 18px 0 0; color: var(--muted); font-size: 10px; line-height: 1.65; }
+.architecture-panel { margin-top: 58px; padding: 28px; border: 1px solid var(--line); border-radius: 18px; background: rgba(255,255,255,.018); }
+.architecture-flow { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr; align-items: center; gap: 12px; }
+.architecture-flow > div { min-height: 92px; display: flex; flex-direction: column; justify-content: center; gap: 8px; padding: 17px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.architecture-flow strong { font-size: 12px; }
+.architecture-flow span { color: var(--muted); font-size: 9px; line-height: 1.5; }
+.architecture-flow > b { color: var(--lime); font-size: 18px; }
+.principle-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 18px; }
+.principle-grid article { display: flex; gap: 14px; padding: 20px; border: 1px solid var(--line); border-radius: 14px; }
+.principle-grid svg { flex: 0 0 auto; color: var(--lime); }
+.principle-grid h3 { margin: 0 0 7px; font-size: 13px; }
+.principle-grid p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.65; }
+
+.release-heading { display: flex; align-items: end; justify-content: space-between; gap: 30px; padding-bottom: 34px; border-bottom: 1px solid var(--line); }
+.release-heading h1 { margin: 8px 0 9px; font-size: 48px; letter-spacing: -.06em; }
+.release-heading p { margin: 0; color: var(--muted); font-size: 13px; }
+.current-release-card { min-width: 225px; display: grid; grid-template-columns: auto 1fr auto; gap: 3px 10px; align-items: center; padding: 17px 19px; border: 1px solid rgba(184,243,61,.28); border-radius: 14px; background: var(--lime-soft); }
+.current-release-card svg { grid-row: 1 / 3; color: var(--lime); }
+.current-release-card span { color: var(--muted); font-size: 9px; font-weight: 800; }
+.current-release-card strong { font-size: 18px; }
+.current-release-card time { grid-column: 3; grid-row: 1 / 3; color: var(--muted); font-size: 9px; }
+.release-layout { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 42px; margin-top: 36px; align-items: start; }
+.release-index { position: sticky; top: 24px; display: flex; flex-direction: column; gap: 5px; }
+.release-index > .eyebrow { margin-bottom: 10px; }
+.release-index > a { display: flex; justify-content: space-between; align-items: center; min-height: 38px; padding: 0 10px; border-radius: 8px; color: var(--muted); font-size: 9px; }
+.release-index > a strong { color: #cbd5cf; font-size: 11px; }
+.release-index > a:hover, .release-index > a.release-current-link { color: var(--lime); background: var(--lime-soft); }
+.release-index > a.release-current-link strong { color: var(--lime); }
+.release-index > a:last-child { justify-content: flex-start; margin-top: 12px; padding-inline: 0; color: var(--lime); font-weight: 800; }
+.release-list { display: flex; flex-direction: column; gap: 16px; }
+.release-card { scroll-margin-top: 20px; padding: 28px; border: 1px solid var(--line); border-radius: 17px; background: linear-gradient(145deg, rgba(17,31,25,.96), rgba(9,20,15,.96)); }
+.release-card:first-child { border-color: rgba(184,243,61,.27); }
+.release-card > header { display: flex; align-items: center; justify-content: space-between; }
+.release-card > header > div:last-child { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 9px; }
+.release-version { display: flex; align-items: center; gap: 10px; }
+.release-version span { padding: 4px 6px; border-radius: 5px; color: var(--lime); background: var(--lime-soft); font-size: 7px; font-weight: 900; letter-spacing: .12em; }
+.release-version strong { font-size: 14px; }
+.release-card h2 { margin: 20px 0 9px; font-size: 24px; letter-spacing: -.045em; }
+.release-summary { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.65; }
+.release-body-grid { display: grid; grid-template-columns: 1.2fr .8fr; gap: 26px; margin-top: 25px; padding-top: 21px; border-top: 1px solid var(--line); }
+.release-body-grid h3 { margin: 0 0 11px; color: #dce4df; font-size: 10px; }
+.release-body-grid ul { margin: 0; padding: 0; list-style: none; }
+.release-body-grid li { position: relative; margin-top: 8px; padding-left: 13px; color: #9eada5; font-size: 10px; line-height: 1.55; }
+.release-body-grid section:first-child li::before { content: ""; position: absolute; left: 0; top: .52em; width: 4px; height: 4px; border-radius: 50%; background: var(--lime); }
+.validation-list li { display: flex; align-items: flex-start; gap: 7px; padding-left: 0; }
+.validation-list svg { flex: 0 0 auto; margin-top: 1px; color: var(--cyan); }
+.release-meta { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 22px; }
+.release-meta a { display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); font-size: 8px; }
+.release-meta a:hover { color: var(--lime); border-color: rgba(184,243,61,.3); }
 
 .detail-shell { width: min(1120px, calc(100% - 40px)); margin: 0 auto; padding-bottom: 50px; }
 .detail-header { min-height: 76px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
@@ -361,6 +424,10 @@ footer a:hover, .site-footer a:hover { color: var(--lime); }
   .player-stat-team + .player-stat-team { border-left: 0; border-top: 1px solid var(--line); }
   .nav-cards { grid-template-columns: repeat(2, 1fr); }
   .transfers-page-grid { grid-template-columns: 1fr; }
+  .stack-grid { grid-template-columns: repeat(2, 1fr); }
+  .info-hero { grid-template-columns: 1fr; gap: 25px; }
+  .architecture-flow { grid-template-columns: 1fr; }
+  .architecture-flow > b { transform: rotate(90deg); justify-self: center; }
   .standings-row-full { grid-template-columns: 28px 1fr 36px 30px 26px 26px 38px 34px; font-size: 9px; }
   .match-row { grid-template-columns: 110px 1fr auto; gap: 10px; }
 }
@@ -386,6 +453,21 @@ footer a:hover, .site-footer a:hover { color: var(--lime); }
   .value-empty { align-items: start; flex-direction: column; }
   footer, .site-footer { flex-wrap: wrap; padding: 25px 0; }
   .nav-cards { grid-template-columns: 1fr; }
+  .info-page { padding-top: 30px; }
+  .info-hero { min-height: auto; padding: 28px 22px; border-radius: 17px; }
+  .info-hero h1 { font-size: 37px; }
+  .stack-grid, .principle-grid { grid-template-columns: 1fr; }
+  .architecture-panel { padding: 20px; }
+  .release-heading { align-items: stretch; flex-direction: column; }
+  .release-heading h1 { font-size: 39px; }
+  .current-release-card { min-width: 0; }
+  .release-layout { grid-template-columns: 1fr; gap: 20px; }
+  .release-index { position: static; display: grid; grid-template-columns: repeat(3, 1fr); }
+  .release-index > .eyebrow, .release-index > a:last-child { grid-column: 1 / -1; }
+  .release-index > a { justify-content: center; }
+  .release-index > a span { display: none; }
+  .release-card { padding: 21px; }
+  .release-body-grid { grid-template-columns: 1fr; }
   .match-row { grid-template-columns: 1fr; gap: 8px; }
   .match-row-meta { flex-direction: row; align-items: center; gap: 10px; }
   .match-row-arrow { display: none; }

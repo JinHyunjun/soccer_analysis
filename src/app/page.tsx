@@ -2,6 +2,7 @@ import { Activity, ArrowRight, BarChart3, Database, ShieldCheck } from "lucide-r
 import Link from "next/link";
 import { LeagueTable } from "@/components/league-table";
 import { MatchStrip } from "@/components/match-strip";
+import { SiteFooter } from "@/components/site-footer";
 import { SourceBadge } from "@/components/source-badge";
 import { Transfers } from "@/components/transfers";
 import { SiteNav } from "@/components/site-nav";
@@ -140,16 +141,7 @@ export default async function Home() {
         </p>
       </section>
 
-      <footer className="site-footer">
-        <div className="brand footer-brand"><span className="brand-ball">S</span><span>SOCCER<span className="brand-accent">/KR</span></span></div>
-        <p>무료 데이터로 시작하되, 출처와 권리를 흐리지 않습니다.</p>
-        <div>
-          <Link href="/matches">경기</Link>
-          <Link href="/standings">순위표</Link>
-          <Link href="/transfers">이적·뉴스</Link>
-          <Link href="/api/health">API 상태</Link>
-        </div>
-      </footer>
+      <SiteFooter />
     </main>
   );
 }

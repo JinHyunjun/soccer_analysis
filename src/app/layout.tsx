@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SOCCER KR — 축구를 한국어로",
+  metadataBase: new URL("https://soccer-korea-web.life-quiz.workers.dev"),
+  title: {
+    default: "SOCCER KR — 축구를 한국어로",
+    template: "%s | SOCCER/KR",
+  },
   description: "경기, 리그, 이적, 가십과 선수 가치 정보를 한눈에 보는 한국어 축구 데이터 서비스",
 };
 
