@@ -11,7 +11,7 @@
     "FOOTBALL_DATA_COMPETITIONS": "WC,PL,PD,BL1,SA,FL1",
     "API_FOOTBALL_TEAM_IDS": "33,40,42",
     "API_FOOTBALL_DEEP_COMPETITIONS": "1:2026",
-    "API_FOOTBALL_MAX_DEEP_FIXTURES": "8",
+    "API_FOOTBALL_MAX_DEEP_FIXTURES": "4",
     "OPENLIGADB_LEAGUES": "wm26:2026",
     "BBC_FOOTBALL_RSS": "https://feeds.bbci.co.uk/sport/football/rss.xml",
     "TRANSFERMARKT_RSS": "https://www.transfermarkt.co.uk/rss/news"

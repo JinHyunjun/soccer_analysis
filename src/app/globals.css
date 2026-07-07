@@ -144,7 +144,8 @@ nav a:hover { color: var(--lime); }
 .transfer-empty svg { color: var(--lime); }
 .transfer-empty span { max-width: 520px; }
 
-.tables-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.tables-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.tables-grid > :nth-child(4), .tables-grid > :nth-child(5) { grid-column: span 1; }
 .table-card { padding: 18px; }
 .table-heading { display: flex; align-items: start; justify-content: space-between; margin-bottom: 16px; }
 .table-heading h3 { margin: 5px 0 0; font-size: 15px; }

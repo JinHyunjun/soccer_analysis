@@ -613,9 +613,9 @@ async function syncOpenLigaMatches(env: IngestEnv): Promise<number> {
   });
 }
 
-async function syncMatches(env: IngestEnv): Promise<number> {
+async function syncMatches(env: IngestEnv, includeFootballData = true): Promise<number> {
   const tasks: Promise<number>[] = [syncOpenLigaMatches(env)];
-  if (featureEnabled(env.ENABLE_FOOTBALL_DATA)) tasks.push(syncFootballDataMatches(env));
+  if (includeFootballData && featureEnabled(env.ENABLE_FOOTBALL_DATA)) tasks.push(syncFootballDataMatches(env));
   const results = await Promise.allSettled(tasks);
   const successes = results.filter((result): result is PromiseFulfilledResult<number> => result.status === "fulfilled");
   if (!successes.length) throw new Error("All match providers failed");
@@ -810,6 +810,7 @@ async function syncTransfers(env: IngestEnv): Promise<number> {
           INSERT INTO players (id, provider_id, external_id, name, updated_at)
           VALUES (?, 'api-football', ?, ?, ?)
           ON CONFLICT(provider_id, external_id) DO UPDATE SET name = excluded.name, updated_at = excluded.updated_at
+          WHERE players.name IS NOT excluded.name
         `).bind(playerId, String(playerRecord.player.id), playerRecord.player.name, now));
 
         for (const transfer of playerRecord.transfers) {
@@ -823,11 +824,13 @@ async function syncTransfers(env: IngestEnv): Promise<number> {
               INSERT INTO teams (id, provider_id, external_id, name, updated_at)
               VALUES (?, 'api-football', ?, ?, ?)
               ON CONFLICT(provider_id, external_id) DO UPDATE SET name = excluded.name, updated_at = excluded.updated_at
+              WHERE teams.name IS NOT excluded.name
             `).bind(fromId, String(transfer.teams.out.id), transfer.teams.out.name, now),
             env.DB.prepare(`
               INSERT INTO teams (id, provider_id, external_id, name, updated_at)
               VALUES (?, 'api-football', ?, ?, ?)
               ON CONFLICT(provider_id, external_id) DO UPDATE SET name = excluded.name, updated_at = excluded.updated_at
+              WHERE teams.name IS NOT excluded.name
             `).bind(toId, String(transfer.teams.in.id), transfer.teams.in.name, now),
             env.DB.prepare(`
               INSERT INTO transfers (
@@ -840,6 +843,13 @@ async function syncTransfers(env: IngestEnv): Promise<number> {
                 from_team_name = excluded.from_team_name, to_team_id = excluded.to_team_id,
                 to_team_name = excluded.to_team_name, transfer_date = excluded.transfer_date,
                 transfer_type = excluded.transfer_type, updated_at = excluded.updated_at
+              WHERE transfers.player_name IS NOT excluded.player_name
+                 OR transfers.from_team_id IS NOT excluded.from_team_id
+                 OR transfers.from_team_name IS NOT excluded.from_team_name
+                 OR transfers.to_team_id IS NOT excluded.to_team_id
+                 OR transfers.to_team_name IS NOT excluded.to_team_name
+                 OR transfers.transfer_date IS NOT excluded.transfer_date
+                 OR transfers.transfer_type IS NOT excluded.transfer_type
             `).bind(
               `api-football:transfer:${await stableId(externalId)}`,
               externalId,
@@ -964,6 +974,15 @@ function upsertApiFootballFixture(
   ];
 }
 
+export function apiFootballFixtureBudget(competitionCount: number, configuredMax: number): number {
+  // Free API-Football accounts allow 10 requests per minute. Each competition
+  // needs one fixture-list request and each selected fixture needs two detail
+  // requests, so keep the entire scheduled stats sync within that minute.
+  const listRequests = Math.min(Math.max(Math.trunc(competitionCount), 0), 6);
+  const detailBudget = Math.max(0, Math.floor((10 - listRequests) / 2));
+  return Math.min(Math.max(Math.trunc(configuredMax), 0), detailBudget);
+}
+
 async function syncApiFootballStats(env: IngestEnv): Promise<number> {
   return withSyncRun(env, "api-football", "match-stats", async () => {
     const competitions = env.API_FOOTBALL_DEEP_COMPETITIONS.split(",")
@@ -971,7 +990,8 @@ async function syncApiFootballStats(env: IngestEnv): Promise<number> {
       .filter(Boolean)
       .slice(0, 6);
     const configuredMax = Number.parseInt(env.API_FOOTBALL_MAX_DEEP_FIXTURES, 10);
-    const maxFixtures = Number.isFinite(configuredMax) ? Math.min(Math.max(configuredMax, 1), 12) : 8;
+    const requestedFixtures = Number.isFinite(configuredMax) ? configuredMax : 4;
+    const maxFixtures = apiFootballFixtureBudget(competitions.length, requestedFixtures);
     const fixtureMap = new Map<number, z.infer<typeof apiFootballFixtureSchema>>();
 
     for (const entry of competitions) {
@@ -1245,12 +1265,15 @@ async function runScheduled(cron: string, env: IngestEnv, scheduledAt: Date): Pr
     return 0;
   });
 
-  // Always: matches (OpenLigaDB + football-data.org) + RSS news
+  const optionalScopes = optionalScheduledScopes(scheduledAt);
+
+  // A standings run already consumes one football-data.org request per configured
+  // competition. Skip its match requests on that tick to stay below the free
+  // provider's per-minute throttle; matches resume on the next half-hour tick.
   const result: Record<string, number> = {
-    matches: await syncMatches(env),
+    matches: await syncMatches(env, !optionalScopes.includes("standings")),
     news: await syncNews(env),
   };
-  const optionalScopes = optionalScheduledScopes(scheduledAt);
 
   if (optionalScopes.includes("standings")) {
     result.standings = featureEnabled(env.ENABLE_FOOTBALL_DATA)

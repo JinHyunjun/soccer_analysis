@@ -38,16 +38,17 @@
 
 | Cron | 기능 | 무료 한도 고려 |
 |---|---|---|
-| `*/30 * * * *` | OpenLigaDB 경기·득점, BBC/Transfermarkt RSS | 무료 공개 소스만 자동 호출하고 계정의 Cron Trigger 수를 1개만 사용 |
-| 같은 Cron의 `00:00/06:00/12:00/18:00 UTC` | 선택: football-data.org 순위, API-Football 이적 | 각 `ENABLE_*`가 켜진 경우에만 실행 |
-| 같은 Cron의 `03:30 UTC` | 선택: API-Football 경기 상세 통계 | `ENABLE_API_FOOTBALL=true`일 때만 실행 |
+| `*/30 * * * *` | OpenLigaDB 및 football-data.org 경기, BBC/Transfermarkt RSS | 계정의 Cron Trigger 수를 1개만 사용 |
+| 같은 Cron의 `00:00/06:00/12:00/18:00 UTC` | football-data.org 순위, API-Football 이적 | 이 시각에는 football-data.org 경기 요청을 생략해 무료 분당 호출 한도 안에서 실행 |
+| 같은 Cron의 `03:30 UTC` | API-Football 경기 상세 통계 | 대회 목록 요청까지 합해 한 번에 10요청 이하로 제한 |
 
-football-data.org와 API-Football은 실제 키를 등록하고 수동 검증한 뒤 `ENABLE_*` 변수를 켭니다. 현재 운영 환경에서는 두 기능 모두 꺼져 있습니다.
+football-data.org와 API-Football의 실제 키를 등록하고 수동 검증했으며, 현재 운영 환경에서는 두 기능 모두 켜져 있습니다. 경기 상세 수집량은 `API_FOOTBALL_MAX_DEEP_FIXTURES=4`를 상한으로 두되 활성 대회 수에 따라 자동으로 더 줄어듭니다.
 
 ## D1 쓰기 원칙
 
 - 모든 외부 ID에 공급자 prefix 사용
 - `INSERT ... ON CONFLICT DO UPDATE ... WHERE`로 값이 바뀐 행만 갱신
+- API-Football 이적 동기화도 팀·선수·이적의 실제 값이 달라질 때만 갱신
 - SQL 문자열에 외부 값을 삽입하지 않고 prepared statement `bind()` 사용
 - 여러 쓰기는 40개씩 `DB.batch()` 처리
 - 조회 컬럼과 정렬 조건에 인덱스 생성

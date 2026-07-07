@@ -12,6 +12,10 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   const data = await getOverview();
   const liveCount = data.matches.filter((match) => match.status === "live" && !match.sample).length;
+  const leagueOrder = ["PL", "PD", "BL1", "SA", "FL1"];
+  const leagueTables = data.tables
+    .filter((table) => leagueOrder.includes(table.code))
+    .sort((a, b) => leagueOrder.indexOf(a.code) - leagueOrder.indexOf(b.code));
 
   return (
     <main>
@@ -99,10 +103,10 @@ export default async function Home() {
       <section className="section" id="leagues">
         <div className="section-heading">
           <div><span className="eyebrow">LEAGUE PULSE</span><h2>리그 한눈에</h2></div>
-          <span className="section-note">월드컵 · 유럽 5대 리그 연결 준비</span>
+          <span className="section-note">프리미어리그 · 라리가 · 분데스리가 · 세리에 A · 리그 1</span>
         </div>
         <div className="tables-grid">
-          {data.tables.slice(0, 3).map((table) => <LeagueTable table={table} key={table.code} />)}
+          {leagueTables.map((table) => <LeagueTable table={table} key={table.code} />)}
         </div>
       </section>
 

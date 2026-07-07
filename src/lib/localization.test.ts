@@ -17,6 +17,8 @@ describe("football display localization", () => {
 
   it("localizes the World Cup competition and round", () => {
     expect(localizeCompetitionName("WM 2026")).toBe("2026 FIFA 월드컵");
+    expect(localizeCompetitionName("Primera Division", "PD")).toBe("라리가");
+    expect(localizeCompetitionName("Premier League", "PL")).toBe("프리미어리그");
     expect(localizeStage("Achtelfinale")).toBe("16강");
     expect(localizeStage("Gruppenphase 2")).toBe("조별리그 2차전");
   });

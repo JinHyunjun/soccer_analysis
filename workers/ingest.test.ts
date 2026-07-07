@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  apiFootballFixtureBudget,
   metricCode,
   normalizeApiFootballStatus,
   numericStatValue,
@@ -63,5 +64,15 @@ describe("single-cron optional schedule", () => {
 
   it("does not return unreachable quarter-hour work for a 30-minute cron", () => {
     expect(optionalScheduledScopes(new Date("2026-07-07T00:15:00Z"))).toEqual([]);
+  });
+});
+
+describe("API-Football free request budget", () => {
+  it("keeps one competition and four fixture details within ten requests", () => {
+    expect(apiFootballFixtureBudget(1, 8)).toBe(4);
+  });
+
+  it("reduces fixture details when more competitions consume list requests", () => {
+    expect(apiFootballFixtureBudget(6, 8)).toBe(2);
   });
 });

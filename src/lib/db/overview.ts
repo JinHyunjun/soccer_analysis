@@ -13,7 +13,7 @@ import { localizeCompetitionName, localizeStage, localizeTeamName } from "@/lib/
 
 const nullableText = z.string().nullable();
 const matchRowSchema = z.object({
-  id: z.string(), competition_name: z.string(), stage: nullableText, kickoff_at: z.string(),
+  id: z.string(), competition_code: nullableText, competition_name: z.string(), stage: nullableText, kickoff_at: z.string(),
   status: z.enum(["scheduled", "live", "finished", "postponed"]), minute: nullableText,
   home_team_id: z.string(), home_team_name: z.string(), home_short_name: nullableText,
   home_crest_url: nullableText, away_team_id: z.string(), away_team_name: z.string(),
@@ -53,7 +53,7 @@ type ProviderRow = z.infer<typeof providerRowSchema>;
 function mapMatches(rows: MatchRow[]): MatchSummary[] {
   return rows.map((row) => ({
     id: row.id,
-    competition: localizeCompetitionName(row.competition_name),
+    competition: localizeCompetitionName(row.competition_name, row.competition_code),
     stage: localizeStage(row.stage),
     kickoff: row.kickoff_at,
     status: row.status,
@@ -81,7 +81,7 @@ function mapTables(rows: StandingRow[]): LeagueTable[] {
   for (const row of rows) {
     const table = grouped.get(row.competition_id) ?? {
       code: row.competition_code ?? row.competition_id,
-      name: localizeCompetitionName(row.competition_name),
+      name: localizeCompetitionName(row.competition_name, row.competition_code),
       type: row.competition_type ?? "LEAGUE",
       source: row.provider_name,
       rows: [],
@@ -144,7 +144,7 @@ export async function getD1Overview(): Promise<OverviewData | null> {
   const { env } = getCloudflareContext();
   const results = await env.DB.batch([
     env.DB.prepare(`
-      SELECT m.id, c.name AS competition_name, m.stage, m.kickoff_at, m.status, m.minute,
+      SELECT m.id, c.code AS competition_code, c.name AS competition_name, m.stage, m.kickoff_at, m.status, m.minute,
              ht.id AS home_team_id, ht.name AS home_team_name, ht.short_name AS home_short_name, ht.crest_url AS home_crest_url,
              at.id AS away_team_id, at.name AS away_team_name, at.short_name AS away_short_name, at.crest_url AS away_crest_url,
              m.home_score, m.away_score, p.display_name AS provider_name

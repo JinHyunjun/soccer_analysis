@@ -57,7 +57,16 @@ export function localizeTeamName(shortName: string | null, fallback: string): st
   return localized.every(Boolean) ? localized.join("/") : fallback;
 }
 
-export function localizeCompetitionName(name: string): string {
+export function localizeCompetitionName(name: string, code?: string | null): string {
+  const namesByCode: Record<string, string> = {
+    WC: "2026 FIFA 월드컵",
+    PL: "프리미어리그",
+    PD: "라리가",
+    BL1: "분데스리가",
+    SA: "세리에 A",
+    FL1: "리그 1",
+  };
+  if (code && namesByCode[code]) return namesByCode[code];
   return /^WM\s+2026$/i.test(name) ? "2026 FIFA 월드컵" : name;
 }
 
