@@ -70,7 +70,7 @@ export default async function TransfersPage() {
               </div>
               <span className="rumour-key"><i /> 가십은 확정이 아닙니다</span>
             </div>
-            <NewsGrid items={data.rumours} emptyText="현재 분류된 이적 가십이 없습니다." />
+            <NewsGrid items={data.rumours} emptyText="현재 분류된 이적 가십이 없습니다." layout="uniform" />
           </section>
 
           <section className="transfers-col">
@@ -81,7 +81,7 @@ export default async function TransfersPage() {
                 <h2>최신 뉴스</h2>
               </div>
             </div>
-            <NewsGrid items={data.news} emptyText="뉴스 피드를 불러오지 못했습니다." />
+            <NewsGrid items={data.news} emptyText="뉴스 피드를 불러오지 못했습니다." layout="uniform" />
           </section>
         </div>
       </div>

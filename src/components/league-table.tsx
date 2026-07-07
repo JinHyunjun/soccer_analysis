@@ -10,6 +10,7 @@ export function LeagueTable({ table, compact = true }: { table: LeagueTableType;
           <span className="eyebrow">LEAGUE TABLE</span>
           <h3>{table.name}</h3>
         </div>
+        {table.pending && <span className="pending-chip">시즌 시작 전 · 순위 미정</span>}
         {table.sample && <span className="sample-chip">샘플</span>}
       </div>
       <div className={`standings-head standings-row${compact ? "" : " standings-row-full"}`}>
@@ -19,14 +20,14 @@ export function LeagueTable({ table, compact = true }: { table: LeagueTableType;
       </div>
       {rows.map((row) => (
         <div className={`standings-row${compact ? "" : " standings-row-full"}`} key={row.team.id}>
-          <span className="standing-position">{row.position}</span>
+          <span className="standing-position">{table.pending ? "-" : row.position}</span>
           <strong>{row.team.name}</strong>
-          <span>{row.played}</span>
-          {!compact && <><span className="positive">{row.won}</span><span>{row.drawn}</span><span className="negative">{row.lost}</span></>}
+          <span>{table.pending ? "-" : row.played}</span>
+          {!compact && <><span className="positive">{table.pending ? "-" : row.won}</span><span>{table.pending ? "-" : row.drawn}</span><span className="negative">{table.pending ? "-" : row.lost}</span></>}
           <span className={row.goalDifference > 0 ? "positive" : row.goalDifference < 0 ? "negative" : ""}>
-            {row.goalDifference > 0 ? "+" : ""}{row.goalDifference}
+            {table.pending ? "-" : <>{row.goalDifference > 0 ? "+" : ""}{row.goalDifference}</>}
           </span>
-          <b>{row.points}</b>
+          <b>{table.pending ? "-" : row.points}</b>
         </div>
       ))}
       {compact && (

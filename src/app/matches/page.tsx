@@ -130,6 +130,12 @@ export default async function MatchesPage({
                             <b>{match.awayScore ?? "-"}</b>
                           </div>
                         </div>
+                        {match.homePenalties !== null && match.homePenalties !== undefined
+                          && match.awayPenalties !== null && match.awayPenalties !== undefined && (
+                          <span className="penalty-result match-row-penalty">
+                            승부차기 {match.homePenalties} : {match.awayPenalties}
+                          </span>
+                        )}
                         <span className="match-row-arrow">→</span>
                       </article>
                     </Link>

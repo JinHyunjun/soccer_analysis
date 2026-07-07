@@ -45,6 +45,10 @@ export function MatchStrip({ matches }: { matches: MatchSummary[] }) {
             <strong>{match.away.name}</strong>
             <b>{match.awayScore ?? "-"}</b>
           </div>
+          {match.homePenalties !== null && match.homePenalties !== undefined
+            && match.awayPenalties !== null && match.awayPenalties !== undefined && (
+            <div className="penalty-result">승부차기 {match.homePenalties} : {match.awayPenalties}</div>
+          )}
           <div className="kickoff"><Clock3 size={13} /> 한국시간 {kickoffLabel(match.kickoff)}</div>
             {!match.sample && <span className="match-detail-hint">경기 상세 보기 →</span>}
           </article>

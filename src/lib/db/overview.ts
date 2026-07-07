@@ -18,11 +18,12 @@ const matchRowSchema = z.object({
   home_team_id: z.string(), home_team_name: z.string(), home_short_name: nullableText,
   home_crest_url: nullableText, away_team_id: z.string(), away_team_name: z.string(),
   away_short_name: nullableText, away_crest_url: nullableText,
-  home_score: z.number().nullable(), away_score: z.number().nullable(), provider_name: z.string(),
+  home_score: z.number().nullable(), away_score: z.number().nullable(),
+  home_penalties: z.number().nullable(), away_penalties: z.number().nullable(), provider_name: z.string(),
 });
 const standingRowSchema = z.object({
   competition_id: z.string(), competition_code: nullableText, competition_name: z.string(),
-  competition_type: nullableText, provider_name: z.string(), position: z.number(), team_id: z.string(),
+  competition_type: nullableText, provider_name: z.string(), season: z.string(), position: z.number(), team_id: z.string(),
   team_name: z.string(), team_short_name: nullableText, crest_url: nullableText, played: z.number(),
   won: z.number(), drawn: z.number(), lost: z.number(), goal_difference: z.number(), points: z.number(),
 });
@@ -72,6 +73,8 @@ function mapMatches(rows: MatchRow[]): MatchSummary[] {
     },
     homeScore: row.home_score,
     awayScore: row.away_score,
+    homePenalties: row.home_penalties,
+    awayPenalties: row.away_penalties,
     source: row.provider_name,
   }));
 }
@@ -84,6 +87,7 @@ function mapTables(rows: StandingRow[]): LeagueTable[] {
       name: localizeCompetitionName(row.competition_name, row.competition_code),
       type: row.competition_type ?? "LEAGUE",
       source: row.provider_name,
+      season: row.season,
       rows: [],
     };
     table.rows.push({
@@ -103,7 +107,10 @@ function mapTables(rows: StandingRow[]): LeagueTable[] {
     });
     grouped.set(row.competition_id, table);
   }
-  return Array.from(grouped.values());
+  return Array.from(grouped.values()).map((table) => ({
+    ...table,
+    pending: table.rows.length > 0 && table.rows.every((row) => row.played === 0),
+  }));
 }
 
 function mapNews(rows: NewsRow[]): NewsItem[] {
@@ -124,15 +131,15 @@ function mapSources(rows: ProviderRow[]): SourceMeta[] {
     const note = row.last_status === "running" && usableAt
       ? `현재 갱신 중 · 마지막 성공: ${usableAt}`
       : row.error_message && usableAt
-        ? `최근 동기화 실패: ${row.error_message} · 마지막 성공 데이터 유지: ${usableAt}`
+        ? `일부 데이터 갱신이 지연되고 있습니다. 마지막 정상 데이터: ${usableAt}`
         : row.error_message
-          ? row.error_message
+          ? "첫 데이터 동기화가 지연되고 있습니다."
           : usableAt
-            ? `D1 마지막 성공: ${usableAt}`
+            ? `정상 동기화 · ${usableAt}`
             : "아직 동기화되지 않았습니다.";
     return {
       provider: row.display_name,
-      state: usableAt ? "cached" : "unavailable",
+      state: usableAt ? row.last_status === "success" ? "live" : "cached" : "unavailable",
       updatedAt: usableAt ?? row.last_sync ?? new Date(0).toISOString(),
       attribution: row.attribution ?? undefined,
       note,
@@ -147,7 +154,8 @@ export async function getD1Overview(): Promise<OverviewData | null> {
       SELECT m.id, c.code AS competition_code, c.name AS competition_name, m.stage, m.kickoff_at, m.status, m.minute,
              ht.id AS home_team_id, ht.name AS home_team_name, ht.short_name AS home_short_name, ht.crest_url AS home_crest_url,
              at.id AS away_team_id, at.name AS away_team_name, at.short_name AS away_short_name, at.crest_url AS away_crest_url,
-             m.home_score, m.away_score, p.display_name AS provider_name
+             m.home_score, m.away_score, m.home_penalties, m.away_penalties,
+             p.display_name AS provider_name
       FROM matches m
       JOIN competitions c ON c.id = m.competition_id
       JOIN teams ht ON ht.id = m.home_team_id
@@ -166,7 +174,7 @@ export async function getD1Overview(): Promise<OverviewData | null> {
         JOIN latest_seasons ls ON ls.competition_id = sr.competition_id AND ls.season = sr.season
       )
       SELECT r.competition_id, c.code AS competition_code, c.name AS competition_name,
-             c.competition_type, p.display_name AS provider_name, r.position, r.team_id,
+             c.competition_type, p.display_name AS provider_name, r.season, r.position, r.team_id,
              r.team_name, t.short_name AS team_short_name, t.crest_url, r.played, r.won,
              r.drawn, r.lost, r.goal_difference, r.points
       FROM ranked r
@@ -234,7 +242,7 @@ export async function getD1Overview(): Promise<OverviewData | null> {
   }));
   const marketValues = z.array(marketValueRowSchema).parse(results[4].results).map<MarketValueItem>((row) => ({
     id: row.id,
-    playerName: row.player_name,
+    playerName: localizePlayerName(row.player_name),
     teamName: row.team_name ?? "소속팀 미상",
     valueEur: row.value_amount,
     valuedAt: row.valued_at,
@@ -262,7 +270,8 @@ export async function getAllMatchesFromDB(): Promise<import("@/lib/domain").Matc
     SELECT m.id, c.code AS competition_code, c.name AS competition_name, m.stage, m.kickoff_at, m.status, m.minute,
            ht.id AS home_team_id, ht.name AS home_team_name, ht.short_name AS home_short_name, ht.crest_url AS home_crest_url,
            at.id AS away_team_id, at.name AS away_team_name, at.short_name AS away_short_name, at.crest_url AS away_crest_url,
-           m.home_score, m.away_score, p.display_name AS provider_name
+           m.home_score, m.away_score, m.home_penalties, m.away_penalties,
+           p.display_name AS provider_name
     FROM matches m
     JOIN competitions c ON c.id = m.competition_id
     JOIN teams ht ON ht.id = m.home_team_id
@@ -283,7 +292,7 @@ export async function getFullStandingsFromDB(): Promise<import("@/lib/domain").L
       SELECT competition_id, MAX(season) AS season FROM standing_rows GROUP BY competition_id
     )
     SELECT sr.competition_id, c.code AS competition_code, c.name AS competition_name,
-           c.competition_type, p.display_name AS provider_name, sr.position, sr.team_id,
+           c.competition_type, p.display_name AS provider_name, sr.season, sr.position, sr.team_id,
            sr.team_name, t.short_name AS team_short_name, t.crest_url,
            sr.played, sr.won, sr.drawn, sr.lost, sr.goal_difference, sr.points
     FROM standing_rows sr

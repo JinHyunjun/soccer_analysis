@@ -21,6 +21,28 @@ export const NOTION_RELEASE_PAGE_URL = "https://app.notion.com/p/396cb8895490817
 
 export const releases: readonly ReleaseNote[] = [
   {
+    version: "0.5.0",
+    date: "2026-07-07",
+    title: "경기 데이터 신뢰도와 화면 전면 개선",
+    summary: "승부차기 점수, 상세 통계 연결, 선수명과 리그·이적 화면의 혼동을 함께 해소했습니다.",
+    highlights: [
+      "정규·연장 점수와 승부차기 결과를 분리해 1-1(승부차기 3-4)처럼 정확히 표시",
+      "API-Football 이벤트·팀 통계·선수 기록을 수집하고 공급자 간 동일 경기를 자동 연결",
+      "골·카드·교체·VAR·승부차기를 경기 타임라인에 구분해 표시",
+      "football-data.org 시즌 값을 명시하고 무료 호출 주기를 6시간으로 조정해 반복 400 오류 방지",
+      "현재 피드의 선수 한국어 이름을 확대하고 개막 전 순위표를 ‘순위 미정’으로 표시",
+      "순위표 너비와 뉴스·이적 소문 카드의 높이·그리드를 일관된 레이아웃으로 정리",
+    ],
+    validation: [
+      "OpenLigaDB 승부차기 회귀 테스트",
+      "API-Football 무료 요청 예산 테스트",
+      "ESLint, Vitest, TypeScript, Cloudflare 프로덕션 빌드",
+      "D1 마이그레이션 및 운영 화면·API 검증",
+    ],
+    routes: ["/", "/matches", "/standings", "/transfers", "/api/overview"],
+    commits: [],
+  },
+  {
     version: "0.4.1",
     date: "2026-07-07",
     title: "Notion 릴리즈 노트 연동",

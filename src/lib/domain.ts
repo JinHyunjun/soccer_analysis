@@ -26,6 +26,8 @@ export interface MatchSummary {
   away: TeamRef;
   homeScore: number | null;
   awayScore: number | null;
+  homePenalties?: number | null;
+  awayPenalties?: number | null;
   source: string;
   sample?: boolean;
 }
@@ -47,6 +49,8 @@ export interface LeagueTable {
   type: string;
   rows: StandingRow[];
   source: string;
+  season?: string;
+  pending?: boolean;
   sample?: boolean;
 }
 

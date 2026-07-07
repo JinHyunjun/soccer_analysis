@@ -364,10 +364,58 @@ export function localizeStage(stage: string | null): string | undefined {
 }
 
 export function localizePlayerName(name: string): string {
-  return playerNamesKo[name] ?? name;
+  const normalized = name.replace(/&apos;/g, "'").replace(/\s+/g, " ").trim();
+  return playerNamesKo[normalized] ?? normalized;
 }
 
 const playerNamesKo: Record<string, string> = {
+  // 현재 수집 중인 이적 피드
+  "J. Sancho": "제이든 산초",
+  "Ethan Williams": "이선 윌리엄스",
+  "E. Wheatley": "이선 휘틀리",
+  "J. Devaney": "잭 데버니",
+  "J. Scanlon": "제임스 스캔런",
+  "C. Scanlon": "캘럼 스캔런",
+  "L. Chambers": "루크 챔버스",
+  "L. Koumas": "루이스 쿠마스",
+  "Luca Stephenson": "루카 스티븐슨",
+  "Isaac Mabaya": "아이작 마바야",
+  "Ismeal Kabia": "이스밀 카비아",
+  "Louie George Copley": "루이 조지 코플리",
+  "Daniel Gore": "댄 고어",
+  "Fabian Mrozek": "파비안 므로제크",
+  "Trent Toure Kone Doherty": "트렌트 코네도허티",
+  "Lee Jonas": "리 조나스",
+  "D. Oyetunde": "다니엘 오예툰데",
+  "C. Sagoe": "찰스 사고 주니어",
+  "Edward Ibrovic-Fletcher": "에드워드 이브로비치플레처",
+  "S. Koné": "세쿠 코네",
+  "Osman Kamara": "오스만 카마라",
+  "Jaden Dixon": "제이든 딕슨",
+  "H. Davies": "하비 데이비스",
+  "O. Zinchenko": "올렉산드르 진첸코",
+  "R. Bennett": "리스 베넷",
+  "Tobias Christopher Collyer": "토비 콜리어",
+  "M. Kacurri": "말디니 카쿠리",
+  "J. Hugill": "조 휴길",
+  "S. Lonmeni": "사무엘 롱메니",
+  "S. Oulad M'Hand": "살라에딘 울라드 음핸드",
+  "H. Amass": "해리 아마스",
+  "E. Nwaneri": "에단 은와네리",
+  "Samuel Mather": "샘 매더",
+  "Elyh Harrison": "엘라이 해리슨",
+  "H. Ogunneye": "하비브 오군네예",
+  "J. McConnell": "제임스 매코널",
+  "Louis Jackson": "루이스 잭슨",
+  "J. Balagizi": "제임스 발라기지",
+  "O. Beck": "오언 벡",
+  "Sonny Aljofree": "소니 알조프리",
+  "James Barry Norris": "제임스 노리스",
+  "T. Tomiyasu": "도미야스 다케히로",
+  "A. Onana": "안드레 오나나",
+  "C. Eriksen": "크리스티안 에릭센",
+  "V. Lindelöf": "빅토르 린델뢰프",
+
   // 아르헨티나
   "Lionel Messi": "리오넬 메시",
   "L. Messi": "리오넬 메시",
@@ -452,6 +500,8 @@ const playerNamesKo: Record<string, string> = {
   "Memphis Depay": "멤피스 더파이",
   "Cody Gakpo": "코디 가크포",
   "Xavi Simons": "하비 시몬스",
+  "Brian Brobbey": "브리안 브로베이",
+  "Wout Weghorst": "바웃 베호르스트",
 
   // 벨기에
   "Kevin De Bruyne": "케빈 더 브라위너",
@@ -470,6 +520,10 @@ const playerNamesKo: Record<string, string> = {
   "A. Hakimi": "아슈라프 하키미",
   "Hakim Ziyech": "하킴 지예흐",
   "Sofiane Boufal": "소피안 부팔",
+  "Soufiane Rahimi": "수피안 라히미",
+  "Ismael Saibari": "이스마엘 사이바리",
+  "Azzedine Ounahi": "아제딘 우나히",
+  "Yassine Bounou": "야신 부누",
 
   // 대한민국
   "Son Heung-min": "손흥민",
@@ -486,6 +540,7 @@ const playerNamesKo: Record<string, string> = {
   "Kaoru Mitoma": "미토마 가오루",
   "Ritsu Doan": "도안 리쓰",
   "Daichi Kamada": "가마다 다이치",
+  "Ayase Ueda": "우에다 아야세",
 
   // 멕시코
   "Julián Quiñones": "훌리안 키뇨네스",
@@ -493,6 +548,8 @@ const playerNamesKo: Record<string, string> = {
   "Hirving Lozano": "이르빙 로사노",
   "H. Lozano": "이르빙 로사노",
   "Guillermo Ochoa": "기예르모 오초아",
+  "Raúl Jiménez": "라울 히메네스",
+  "Raul Jiminez": "라울 히메네스",
 
   // 클럽 선수 (PL/UCL 등)
   "Mohamed Salah": "모하메드 살라",
@@ -518,4 +575,27 @@ const playerNamesKo: Record<string, string> = {
   "L. Modrić": "루카 모드리치",
   "Toni Kroos": "토니 크로스",
   "Casemiro": "카세미루",
+  "Mikel Oyarzabal": "미켈 오야르사발",
+  "Ismaïla Sarr": "이스마일라 사르",
+  "Yoane Wissa": "요안 위사",
+  "Matheus Cunha": "마테우스 쿠냐",
+  "Jonathan David": "조너선 데이비드",
+  "Folarin Balogun": "폴라린 발로건",
+  "Deniz Undav": "데니즈 운다브",
+  "Youri Tielemans": "유리 틸레만스",
+  "Ruben Vargas": "루벤 바르가스",
+  "Nicolas Pépé": "니콜라 페페",
+  "Leandro Trossard": "레안드로 트로사르",
+  "Daniel Muñoz": "다니엘 무뇨스",
+  "Cyrensio Summerville": "크리센시오 서머빌",
+  "Cyle Larin": "사일 라린",
+  "Charles De Ketelaere": "샤를 더케텔라러",
+  "Breel Embolo": "브릴 엠볼로",
+  "Bradley Barcola": "브래들리 바르콜라",
+  "Anthony Elanga": "안토니 엘랑가",
+  "Amad Diallo": "아마드 디알로",
+  "Viktor Gyökeres": "빅토르 요케레스",
+  "Teun Koopmeiners": "퇸 코프메이너르스",
+  "Stephen Eustáquio": "스티븐 에우스타키우",
+  "Pedro Porro": "페드로 포로",
 };

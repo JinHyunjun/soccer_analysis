@@ -26,12 +26,19 @@ const eventLabel: Record<string, string> = {
   goal: "득점",
   card: "카드",
   substitution: "교체",
+  var: "VAR 판독",
+  penalty_shootout: "승부차기",
+  other: "경기 이벤트",
 };
 
 const detailLabel: Record<string, string> = {
   normal_goal: "필드골",
   penalty: "페널티킥",
   own_goal: "자책골",
+  shootout_scored: "승부차기 성공",
+  yellow_card: "옐로카드",
+  red_card: "레드카드",
+  substitution_1: "선수 교체",
 };
 
 function kickoffLabel(value: string): string {
@@ -84,13 +91,13 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
       away: null,
     };
     const value = { value: stat.value_numeric, text: stat.value_text };
-    if (stat.team_id === match.home_team_id) row.home = value;
-    if (stat.team_id === match.away_team_id) row.away = value;
+    if (stat.side === "home") row.home = value;
+    if (stat.side === "away") row.away = value;
     statRows.set(stat.stat_code, row);
   }
 
-  const homePlayers = playerStats.filter((player) => player.team_id === match.home_team_id);
-  const awayPlayers = playerStats.filter((player) => player.team_id === match.away_team_id);
+  const homePlayers = playerStats.filter((player) => player.side === "home");
+  const awayPlayers = playerStats.filter((player) => player.side === "away");
 
   return (
     <main className="detail-shell">
@@ -115,6 +122,9 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
           </div>
           <div className="score-centre">
             <div><strong>{match.home_score ?? "-"}</strong><span>:</span><strong>{match.away_score ?? "-"}</strong></div>
+            {match.home_penalties !== null && match.away_penalties !== null && (
+              <em className="penalty-score">승부차기 {match.home_penalties} : {match.away_penalties}</em>
+            )}
             <small><Clock3 size={13} /> {kickoffLabel(match.kickoff_at)}</small>
           </div>
           <div className="score-team away-score-team">
@@ -134,7 +144,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
           {events.length ? (
             <div className="event-list">
               {events.map((event) => {
-                const isHome = event.team_name === match.home_team;
+                const isHome = event.side === "home";
                 return (
                   <article className={`event-row ${isHome ? "event-home" : "event-away"}`} key={event.id}>
                     <time>{event.minute ?? "-"}{event.stoppage_minute ? `+${event.stoppage_minute}` : ""}&apos;</time>

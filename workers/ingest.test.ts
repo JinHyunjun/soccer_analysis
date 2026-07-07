@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   apiFootballFixtureBudget,
+  footballDataSeason,
   metricCode,
   normalizeApiFootballStatus,
   numericStatValue,
@@ -34,10 +35,10 @@ describe("OpenLigaDB live-score selection", () => {
     expect(resolveOpenLigaScore(
       [{ pointsTeam1: 0, pointsTeam2: 0, resultOrderID: 1 }],
       [
-        { goalID: 10, scoreTeam1: 1, scoreTeam2: 0 },
-        { goalID: 12, scoreTeam1: 1, scoreTeam2: 1 },
+        { goalID: 10, scoreTeam1: 1, scoreTeam2: 0, matchMinute: 30 },
+        { goalID: 12, scoreTeam1: 1, scoreTeam2: 1, matchMinute: 72 },
       ],
-    )).toEqual({ home: 1, away: 1 });
+    )).toEqual({ home: 1, away: 1, homePenalties: null, awayPenalties: null });
   });
 
   it("falls back to the highest-order match result when there are no goals", () => {
@@ -47,7 +48,29 @@ describe("OpenLigaDB live-score selection", () => {
         { pointsTeam1: 4, pointsTeam2: 3, resultOrderID: 2 },
       ],
       [],
-    )).toEqual({ home: 4, away: 3 });
+    )).toEqual({ home: 4, away: 3, homePenalties: null, awayPenalties: null });
+  });
+
+  it("keeps the main score separate from a penalty shootout", () => {
+    expect(resolveOpenLigaScore(
+      [
+        { pointsTeam1: 1, pointsTeam2: 1, resultOrderID: 3, resultTypeID: 3, resultName: "Endergebnis" },
+        { pointsTeam1: 1, pointsTeam2: 1, resultOrderID: 4, resultTypeID: 4, resultName: "nach Verlängerung" },
+        { pointsTeam1: 3, pointsTeam2: 4, resultOrderID: 5, resultTypeID: 5, resultName: "nach Elfmeterschießen" },
+      ],
+      [
+        { goalID: 1, scoreTeam1: 1, scoreTeam2: 0, matchMinute: 12 },
+        { goalID: 2, scoreTeam1: 1, scoreTeam2: 1, matchMinute: 72 },
+        { goalID: 3, scoreTeam1: 2, scoreTeam2: 1, matchMinute: null },
+        { goalID: 4, scoreTeam1: 3, scoreTeam2: 4, matchMinute: null },
+      ],
+    )).toEqual({ home: 1, away: 1, homePenalties: 3, awayPenalties: 4 });
+  });
+});
+
+describe("football-data.org season selection", () => {
+  it("uses the starting year for a July domestic season", () => {
+    expect(footballDataSeason(new Date("2026-07-07T00:00:00Z"))).toBe(2026);
   });
 });
 
@@ -68,11 +91,11 @@ describe("single-cron optional schedule", () => {
 });
 
 describe("API-Football free request budget", () => {
-  it("keeps one competition and four fixture details within ten requests", () => {
-    expect(apiFootballFixtureBudget(1, 8)).toBe(4);
+  it("keeps one competition and three fixture details within ten requests", () => {
+    expect(apiFootballFixtureBudget(1, 8)).toBe(3);
   });
 
   it("reduces fixture details when more competitions consume list requests", () => {
-    expect(apiFootballFixtureBudget(6, 8)).toBe(2);
+    expect(apiFootballFixtureBudget(6, 8)).toBe(1);
   });
 });
