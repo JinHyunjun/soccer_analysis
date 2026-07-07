@@ -6,8 +6,8 @@
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
     "ENVIRONMENT": "production",
-    "ENABLE_FOOTBALL_DATA": "false",
-    "ENABLE_API_FOOTBALL": "false",
+    "ENABLE_FOOTBALL_DATA": "true",
+    "ENABLE_API_FOOTBALL": "true",
     "FOOTBALL_DATA_COMPETITIONS": "WC,PL,PD,BL1,SA,FL1",
     "API_FOOTBALL_TEAM_IDS": "33,40,42",
     "API_FOOTBALL_DEEP_COMPETITIONS": "1:2026",
