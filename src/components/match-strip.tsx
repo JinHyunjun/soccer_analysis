@@ -36,13 +36,13 @@ export function MatchStrip({ matches }: { matches: MatchSummary[] }) {
             </span>
           </div>
           <div className="team-line">
-            <span className="team-mark">{match.home.shortName?.slice(0, 2) ?? match.home.name.slice(0, 1)}</span>
-            <strong>{match.home.shortName ?? match.home.name}</strong>
+            <span className="team-mark">{match.home.name.slice(0, 1)}</span>
+            <strong>{match.home.name}</strong>
             <b>{match.homeScore ?? "-"}</b>
           </div>
           <div className="team-line">
-            <span className="team-mark away-mark">{match.away.shortName?.slice(0, 2) ?? match.away.name.slice(0, 1)}</span>
-            <strong>{match.away.shortName ?? match.away.name}</strong>
+            <span className="team-mark away-mark">{match.away.name.slice(0, 1)}</span>
+            <strong>{match.away.name}</strong>
             <b>{match.awayScore ?? "-"}</b>
           </div>
           <div className="kickoff"><Clock3 size={13} /> 한국시간 {kickoffLabel(match.kickoff)}</div>

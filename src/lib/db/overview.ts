@@ -255,3 +255,43 @@ export async function getD1Overview(): Promise<OverviewData | null> {
     generatedAt: new Date().toISOString(),
   };
 }
+
+export async function getAllMatchesFromDB(): Promise<import("@/lib/domain").MatchSummary[]> {
+  const { env } = getCloudflareContext();
+  const result = await env.DB.prepare(`
+    SELECT m.id, c.code AS competition_code, c.name AS competition_name, m.stage, m.kickoff_at, m.status, m.minute,
+           ht.id AS home_team_id, ht.name AS home_team_name, ht.short_name AS home_short_name, ht.crest_url AS home_crest_url,
+           at.id AS away_team_id, at.name AS away_team_name, at.short_name AS away_short_name, at.crest_url AS away_crest_url,
+           m.home_score, m.away_score, p.display_name AS provider_name
+    FROM matches m
+    JOIN competitions c ON c.id = m.competition_id
+    JOIN teams ht ON ht.id = m.home_team_id
+    JOIN teams at ON at.id = m.away_team_id
+    JOIN providers p ON p.id = m.provider_id
+    WHERE m.kickoff_at >= datetime('now', '-7 days')
+      AND m.kickoff_at <= datetime('now', '+21 days')
+    ORDER BY CASE m.status WHEN 'live' THEN 0 WHEN 'scheduled' THEN 1 ELSE 2 END, m.kickoff_at
+    LIMIT 100
+  `).all();
+  return mapMatches(z.array(matchRowSchema).parse(result.results));
+}
+
+export async function getFullStandingsFromDB(): Promise<import("@/lib/domain").LeagueTable[]> {
+  const { env } = getCloudflareContext();
+  const result = await env.DB.prepare(`
+    WITH latest_seasons AS (
+      SELECT competition_id, MAX(season) AS season FROM standing_rows GROUP BY competition_id
+    )
+    SELECT sr.competition_id, c.code AS competition_code, c.name AS competition_name,
+           c.competition_type, p.display_name AS provider_name, sr.position, sr.team_id,
+           sr.team_name, t.short_name AS team_short_name, t.crest_url,
+           sr.played, sr.won, sr.drawn, sr.lost, sr.goal_difference, sr.points
+    FROM standing_rows sr
+    JOIN latest_seasons ls ON ls.competition_id = sr.competition_id AND ls.season = sr.season
+    JOIN competitions c ON c.id = sr.competition_id
+    JOIN providers p ON p.id = sr.provider_id
+    JOIN teams t ON t.id = sr.team_id
+    ORDER BY c.name, sr.position
+  `).all();
+  return mapTables(z.array(standingRowSchema).parse(result.results));
+}
